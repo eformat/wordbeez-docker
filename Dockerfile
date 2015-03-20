@@ -37,4 +37,4 @@ RUN curl -SL "$TOMCAT_TGZ_URL" -o tomcat.tar.gz \
 ADD wbee-1.0 /usr/local/tomcat/webapps/wbee
 
 EXPOSE 8080
-CMD ["catalina.sh", "run"]
+CMD ["/catalina.sh", "run"]

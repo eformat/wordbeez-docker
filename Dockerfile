@@ -38,4 +38,4 @@ ADD wbee-1.0 /usr/local/tomcat/webapps/wbee
 
 EXPOSE 8080
 
-CMD ["/bin/bash", "catalina.sh", "run"]
+CMD [catalina.sh, run]

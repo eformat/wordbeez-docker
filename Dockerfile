@@ -39,4 +39,4 @@ ADD wbee-1.0 $CATALINA_HOME/webapps/wbee
 
 EXPOSE 8080
 
-CMD ["/bin/bash", "-c", "${CATALINA_HOME}/bin/catalina.sh run"]
+CMD ["${CATALINA_HOME}/bin/catalina.sh", "run"]

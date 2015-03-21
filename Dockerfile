@@ -6,6 +6,7 @@ FROM java:7-jre
 ENV CATALINA_HOME /usr/local/tomcat
 ENV PATH $CATALINA_HOME/bin:$PATH
 RUN mkdir -p "$CATALINA_HOME"
+
 WORKDIR $CATALINA_HOME
 
 # see https://www.apache.org/dist/tomcat/tomcat-8/KEYS
@@ -34,8 +35,8 @@ RUN curl -SL "$TOMCAT_TGZ_URL" -o tomcat.tar.gz \
 	&& rm bin/*.bat \
 	&& rm tomcat.tar.gz*
 
-ADD wbee-1.0 /usr/local/tomcat/webapps/wbee
+ADD wbee-1.0 $CATALINA_HOME/webapps/wbee
 
 EXPOSE 8080
 
-CMD [catalina.sh, run]
+CMD ["/bin/bash", "-c", "${CATALINA_HOME}/bin/catalina.sh run"]

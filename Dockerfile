@@ -6,8 +6,6 @@ FROM java:7-jre
 ENV CATALINA_HOME /usr/local/tomcat
 ENV PATH $CATALINA_HOME/bin:$PATH
 RUN mkdir -p "$CATALINA_HOME"
-RUN chmod 775 -R "$CATALINA_HOME"
-
 
 WORKDIR $CATALINA_HOME
 
@@ -38,6 +36,8 @@ RUN curl -SL "$TOMCAT_TGZ_URL" -o tomcat.tar.gz \
 	&& rm tomcat.tar.gz*
 
 ADD wbee-1.0 $CATALINA_HOME/webapps/wbee
+
+RUN chmod 777 -R "$CATALINA_HOME"
 
 EXPOSE 8080
 

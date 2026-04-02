@@ -93,12 +93,21 @@ export function getAgentState(): AgentState {
 }
 
 export function getLogsSince(fromIndex: number): { logs: string[]; nextIndex: number; stats: AgentStats; running: boolean } {
-  // Return logs from fromIndex onward
-  const startIdx = Math.max(0, fromIndex);
-  const newLogs = _logs.slice(startIdx);
+  // _logCounter is the total logs ever added (monotonically increasing).
+  // _logs is a rolling buffer of the last MAX_LOGS entries.
+  // Convert the absolute cursor (fromIndex) to an array offset.
+  const oldestAbsolute = _logCounter - _logs.length; // absolute index of _logs[0]
+  let arrayOffset: number;
+  if (fromIndex <= oldestAbsolute) {
+    // Client is behind the buffer — send everything we have
+    arrayOffset = 0;
+  } else {
+    arrayOffset = fromIndex - oldestAbsolute;
+  }
+  const newLogs = _logs.slice(arrayOffset);
   return {
     logs: newLogs,
-    nextIndex: _logs.length,
+    nextIndex: _logCounter, // absolute cursor for next poll
     stats: { ..._stats },
     running: _process !== null && _process.exitCode === null,
   };

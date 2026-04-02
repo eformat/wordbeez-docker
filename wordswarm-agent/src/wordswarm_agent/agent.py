@@ -228,7 +228,9 @@ You do NOT have access to the word list — you must figure out the words yourse
 - You see hints for each word: first letter + word length (e.g., B____ = 5-letter word starting with B)
 - Words are formed by tracing adjacency paths through the honeycomb
 - Finding words restores honey; honey drains constantly
-- 3 puzzles per level, then advance; each level drains honey faster
+- Each level has 3 puzzles — solve all words in a puzzle to advance to the next puzzle
+- After completing 3 puzzles, the level advances and honey drains faster
+- When a puzzle is completed, the board reloads with new letters and new hints — keep solving
 - Game over when honey reaches 0
 
 ## Your tools:
@@ -247,9 +249,9 @@ You do NOT have access to the word list — you must figure out the words yourse
    a. Call find_words to enumerate candidates
    b. Call submit_safe_words to submit all certain matches
    c. For ambiguous hints, analyze the candidates and pick the most likely word, then submit_word_by_name
-   d. After submissions, observe again — some cells disappear, narrowing remaining hints
-4. Repeat until the puzzle is complete (phase changes to 'levelComplete' or new puzzle loads)
-5. Wait for next puzzle and solve again
+   d. After submissions, call find_words again — the board changes as cells vanish, and a new puzzle may have loaded with fresh letters and hints
+4. Keep solving continuously — when all words in a puzzle are found, a new puzzle loads automatically with new letters
+5. After 3 puzzles, the level advances (briefly shows level-complete message, then continues)
 6. Report final score on game over
 
 ## Important:

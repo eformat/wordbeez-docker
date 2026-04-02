@@ -1,0 +1,58 @@
+# WordSwarm Helm Chart values
+
+namespace: wordswarm
+
+game:
+  image:
+    repository: quay.io/eformat/wordswarm-game
+    tag: latest
+    pullPolicy: Always
+  port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# Optional: deploy agent as a sidecar container
+# The game image includes the agent (started via dashboard button),
+# so the sidecar is only needed for auto-start without dashboard interaction
+agent:
+  enabled: false
+  image:
+    repository: quay.io/eformat/wordswarm-agent
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# MaaS model token — provide via --set or external secret
+modelToken: ""
+
+# Use an existing secret instead of creating one
+# Set to the name of a Secret with key MODEL_TOKEN
+existingSecret: ""
+
+# Default model endpoint
+modelUrl: "https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1"
+modelName: "kimi-k2-5"
+
+# Persistent storage for leaderboard
+persistence:
+  enabled: true
+  size: 1Gi
+
+# OpenShift Route
+route:
+  enabled: true
+  host: ""
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

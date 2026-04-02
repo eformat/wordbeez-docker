@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "wordswarm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "wordswarm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wordswarm.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        # Game server (Next.js + embedded Python agent)
+        - name: game
+          image: "{{ .Values.game.image.repository }}:{{ .Values.game.image.tag }}"
+          imagePullPolicy: {{ .Values.game.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.game.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ .Values.game.port | quote }}
+            - name: MODEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wordswarm.secretName" . }}
+                  key: MODEL_TOKEN
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
+          resources:
+            {{- toYaml .Values.game.resources | nindent 12 }}
+
+        {{- if .Values.agent.enabled }}
+        # Optional agent sidecar (auto-starts without dashboard interaction)
+        - name: agent
+          image: "{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag }}"
+          imagePullPolicy: {{ .Values.agent.image.pullPolicy }}
+          env:
+            - name: GAME_URL
+              value: "http://localhost:{{ .Values.game.port }}"
+            - name: MODEL_URL
+              value: {{ .Values.modelUrl | quote }}
+            - name: MODEL_NAME
+              value: {{ .Values.modelName | quote }}
+            - name: MODEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wordswarm.secretName" . }}
+                  key: MODEL_TOKEN
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          resources:
+            {{- toYaml .Values.agent.resources | nindent 12 }}
+        {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-data
+      {{- end }}

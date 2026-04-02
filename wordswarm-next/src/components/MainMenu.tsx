@@ -5,9 +5,10 @@ import { useState, useEffect } from 'react';
 interface MainMenuProps {
   onStartGame: (mode: '1player' | '2players') => void;
   onHowToPlay: () => void;
+  onLeaderboard: () => void;
 }
 
-export default function MainMenu({ onStartGame, onHowToPlay }: MainMenuProps) {
+export default function MainMenu({ onStartGame, onHowToPlay, onLeaderboard }: MainMenuProps) {
   const [wingState, setWingState] = useState<0 | 1 | 2>(0);
 
   useEffect(() => {
@@ -35,27 +36,6 @@ export default function MainMenu({ onStartGame, onHowToPlay }: MainMenuProps) {
         position: 'relative',
       }}
     >
-      {/* License button */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          width: 30,
-          height: 30,
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255,255,255,0.3)',
-          textAlign: 'center',
-          lineHeight: '30px',
-          fontFamily: 'serif',
-          fontSize: 18,
-          color: '#fff',
-          cursor: 'pointer',
-        }}
-      >
-        i
-      </div>
-
       {/* Bee */}
       <div
         style={{
@@ -83,12 +63,12 @@ export default function MainMenu({ onStartGame, onHowToPlay }: MainMenuProps) {
 
       {/* 1 Player button */}
       <div onClick={() => onStartGame('1player')} style={{ cursor: 'pointer' }}>
-        <div style={{ position: 'absolute', bottom: 12, left: 250, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
+        <div style={{ position: 'absolute', bottom: 12, left: 105, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
         <div
           style={{
             position: 'absolute',
             bottom: 32,
-            left: 290,
+            left: 150,
             width: 100,
             height: 40,
             backgroundImage: 'url(/images/SilverButton-centervertical.png)',
@@ -102,17 +82,17 @@ export default function MainMenu({ onStartGame, onHowToPlay }: MainMenuProps) {
         >
           1 PLAYER
         </div>
-        <div style={{ position: 'absolute', bottom: 12, left: 385, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
+        <div style={{ position: 'absolute', bottom: 12, left: 250, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
       </div>
 
       {/* 2 Players button */}
       <div onClick={() => onStartGame('2players')} style={{ cursor: 'pointer' }}>
-        <div style={{ position: 'absolute', bottom: 12, left: 403, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
+        <div style={{ position: 'absolute', bottom: 12, left: 285, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
         <div
           style={{
             position: 'absolute',
             bottom: 32,
-            left: 448,
+            left: 330,
             width: 100,
             height: 40,
             backgroundImage: 'url(/images/SilverButton-centervertical.png)',
@@ -126,18 +106,18 @@ export default function MainMenu({ onStartGame, onHowToPlay }: MainMenuProps) {
         >
           2 PLAYERS
         </div>
-        <div style={{ position: 'absolute', bottom: 12, left: 544, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
+        <div style={{ position: 'absolute', bottom: 12, left: 430, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
       </div>
 
       {/* How To Play button */}
       <div onClick={onHowToPlay} style={{ cursor: 'pointer' }}>
-        <div style={{ position: 'absolute', bottom: 12, left: 560, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
+        <div style={{ position: 'absolute', bottom: 12, left: 468, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
         <div
           style={{
             position: 'absolute',
             bottom: 32,
-            left: 605,
-            width: 150,
+            left: 513,
+            width: 130,
             height: 40,
             backgroundImage: 'url(/images/SilverButton-centervertical.png)',
             backgroundRepeat: 'repeat-x',
@@ -150,7 +130,31 @@ export default function MainMenu({ onStartGame, onHowToPlay }: MainMenuProps) {
         >
           HOW TO PLAY
         </div>
-        <div style={{ position: 'absolute', bottom: 12, left: 755, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
+        <div style={{ position: 'absolute', bottom: 12, left: 643, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
+      </div>
+
+      {/* Leaderboard button */}
+      <div onClick={onLeaderboard} style={{ cursor: 'pointer' }}>
+        <div style={{ position: 'absolute', bottom: 12, left: 680, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 32,
+            left: 725,
+            width: 150,
+            height: 40,
+            backgroundImage: 'url(/images/SilverButton-centervertical.png)',
+            backgroundRepeat: 'repeat-x',
+            font: '14pt "Lato Black"',
+            textAlign: 'center',
+            lineHeight: '160%',
+            color: '#393739',
+            zIndex: 2,
+          }}
+        >
+          LEADERBOARD
+        </div>
+        <div style={{ position: 'absolute', bottom: 12, left: 875, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
       </div>
     </div>
   );

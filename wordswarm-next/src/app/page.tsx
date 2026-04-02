@@ -4,15 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import MainMenu from '@/components/MainMenu';
 import GamePage from '@/components/GamePage';
 import HowToPlay from '@/components/HowToPlay';
+import Leaderboard from '@/components/Leaderboard';
 import { sounds } from '@/lib/sounds';
 
-type Screen = 'main' | 'game' | 'howto';
+type Screen = 'main' | 'game' | 'howto' | 'leaderboard';
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>('main');
   const [gameMode, setGameMode] = useState<'1player' | '2players'>('1player');
-  const [soundEffectsOn] = useState(true);
-  const [themeMusicOn] = useState(true);
+  const [soundEffectsOn, setSoundEffectsOn] = useState(true);
+  const [themeMusicOn, setThemeMusicOn] = useState(true);
+  const [highlightEntryId, setHighlightEntryId] = useState<string | undefined>();
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +50,15 @@ export default function Home() {
   }, [themeMusicOn]);
 
   return (
+    <div style={{
+      backgroundColor: '#000',
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+      position: 'relative',
+    }}>
     <div
       ref={containerRef}
       style={{
@@ -76,6 +87,11 @@ export default function Home() {
             sounds.themeMusic.stop();
             setScreen('howto');
           }}
+          onLeaderboard={() => {
+            sounds.themeMusic.stop();
+            setHighlightEntryId(undefined);
+            setScreen('leaderboard');
+          }}
         />
       )}
 
@@ -83,9 +99,20 @@ export default function Home() {
         <GamePage
           mode={gameMode}
           soundEffectsOn={soundEffectsOn}
+          themeMusicOn={themeMusicOn}
+          onSoundToggle={setSoundEffectsOn}
+          onMusicToggle={(on) => {
+            setThemeMusicOn(on);
+            if (on) sounds.themeMusic.play();
+            else sounds.themeMusic.stop();
+          }}
           onMainMenu={() => {
             setScreen('main');
             if (themeMusicOn) sounds.themeMusic.play();
+          }}
+          onScoreSubmitted={(entryId) => {
+            setHighlightEntryId(entryId);
+            setScreen('leaderboard');
           }}
         />
       )}
@@ -98,6 +125,18 @@ export default function Home() {
           }}
         />
       )}
+
+      {screen === 'leaderboard' && (
+        <Leaderboard
+          onMainMenu={() => {
+            setScreen('main');
+            setHighlightEntryId(undefined);
+            if (themeMusicOn) sounds.themeMusic.play();
+          }}
+          highlightEntryId={highlightEntryId}
+        />
+      )}
+    </div>
     </div>
   );
 }

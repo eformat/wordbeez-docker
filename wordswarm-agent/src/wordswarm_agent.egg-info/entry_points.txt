@@ -1,0 +1,2 @@
+[console_scripts]
+wordswarm-agent = wordswarm_agent.main:main

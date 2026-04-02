@@ -14,14 +14,33 @@ import {
 } from '@/lib/gameEngine';
 import { sounds } from '@/lib/sounds';
 
+// Sync game state to the server-side store via API
+async function syncState(state: Record<string, unknown>) {
+  try {
+    await fetch('/api/game/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state),
+    });
+  } catch {}
+}
+
 interface GamePageProps {
   mode: '1player' | '2players';
   soundEffectsOn: boolean;
+  themeMusicOn: boolean;
+  onSoundToggle: (on: boolean) => void;
+  onMusicToggle: (on: boolean) => void;
   onMainMenu: () => void;
+  onScoreSubmitted?: (entryId: string) => void;
 }
 
-export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageProps) {
+export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundToggle, onMusicToggle, onMainMenu, onScoreSubmitted }: GamePageProps) {
   const [phase, setPhase] = useState<'intro' | 'go' | 'playing' | 'levelComplete' | 'gameOver' | 'paused' | 'p1done'>('intro');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showNameEntry, setShowNameEntry] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [scoreSaved, setScoreSaved] = useState(false);
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [honeyLevel, setHoneyLevel] = useState(200);
@@ -51,8 +70,19 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const phaseRef = useRef(phase);
   const scoreRef = useRef(0);
+  const puzzleTransitionRef = useRef(false);
+  const levelTransitionRef = useRef(false);
 
   phaseRef.current = phase;
+
+  // Sync state to server for agent API access
+  useEffect(() => {
+    syncState({
+      phase, level, score, honeyLevel, timeLeft,
+      letters, wordList, revealedWords, honeycombVisible,
+      mode, playerId, player1Score,
+    });
+  }, [phase, level, score, honeyLevel, timeLeft, letters, wordList, revealedWords, honeycombVisible, mode, playerId, player1Score]);
 
   // Load word list
   useEffect(() => {
@@ -87,6 +117,8 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
     setHoneycombSelected(Array(17).fill(false));
     setRevealedWords(puzzle.wordList.map(() => []));
     lettersFoundRef.current = 0;
+    puzzleTransitionRef.current = false;
+    levelTransitionRef.current = false;
   }, []);
 
   const startGame = useCallback(() => {
@@ -241,12 +273,15 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
 
           lettersFoundRef.current += result.score;
 
-          if (lettersFoundRef.current >= 17) {
+          if (lettersFoundRef.current >= 17 && !puzzleTransitionRef.current) {
+            puzzleTransitionRef.current = true;
             setPuzzlesCompleted((prev) => {
               const newCompleted = prev + 1;
-              if (newCompleted >= 3) {
+              if (newCompleted >= 3 && !levelTransitionRef.current) {
                 // Level completed
+                levelTransitionRef.current = true;
                 setShowLevelMsg(true);
+                setPhase('levelComplete');
                 if (timerRef.current) clearInterval(timerRef.current);
                 setTimeout(() => {
                   setShowLevelMsg(false);
@@ -264,6 +299,7 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
                     setHoneycombSelected(Array(17).fill(false));
                     setRevealedWords(puzzle.wordList.map(() => []));
                     lettersFoundRef.current = 0;
+                    puzzleTransitionRef.current = false;
                   }
                 }, 1000);
               }
@@ -358,6 +394,43 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
     if (scoreRef.current < player1Score) return 1;
     return 0;
   };
+
+  // Poll for agent actions (must be after all handler definitions)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/game', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_pending' }),
+        });
+        const data = await res.json();
+        if (data.actions && data.actions.length > 0) {
+          // Process actions sequentially with delays to let React state settle
+          let delay = 0;
+          for (const act of data.actions) {
+            if (act.action === 'start') {
+              if (delay === 0) { startGame(); } else { setTimeout(() => startGame(), delay); }
+            } else if (act.action === 'submit_word' && act.cells) {
+              const cells: number[] = act.cells;
+              if (cells.length > 0) {
+                const d = delay;
+                setTimeout(() => {
+                  handleMouseDown(cells[0]);
+                  for (let i = 1; i < cells.length; i++) {
+                    handleMouseOver(cells[i]);
+                  }
+                  setTimeout(() => handleMouseUp(), 50);
+                }, d);
+                delay += 150;
+              }
+            }
+          }
+        }
+      } catch {}
+    }, 200);
+    return () => clearInterval(pollInterval);
+  }, [startGame, handleMouseDown, handleMouseOver, handleMouseUp]);
 
   return (
     <div
@@ -523,6 +596,7 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
       {/* Settings button */}
       {phase === 'playing' && (
         <div
+          onClick={() => setShowSettings(true)}
           style={{
             position: 'absolute',
             right: 0,
@@ -678,8 +752,141 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
         </div>
       )}
 
+      {/* Settings dialog — positions match original CSS exactly */}
+      {showSettings && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: 1024,
+            height: 600,
+            backgroundColor: 'rgba(0,0,0,0.33)',
+            zIndex: 99,
+          }}
+        >
+          {/* Background panel */}
+          <div style={{
+            position: 'absolute', top: 191, left: 291,
+            width: 409, height: 218,
+            backgroundImage: 'url(/images/SettingsWindow.png)',
+          }} />
+
+          {/* Sound Effects label */}
+          <div style={{
+            position: 'absolute', top: 237, left: 331,
+            fontFamily: '"Lato Black"', fontSize: '18pt', color: '#393739',
+          }}>
+            SOUND EFFECTS
+          </div>
+
+          {/* Sound Effects slider */}
+          <div
+            onClick={() => onSoundToggle(!soundEffectsOn)}
+            style={{
+              position: 'absolute', top: 226,
+              left: soundEffectsOn ? 536 : 595,
+              width: 62, height: 52,
+              backgroundImage: 'url(/images/Settings-Slider.png)',
+              cursor: 'pointer',
+              transition: 'left 0.15s',
+            }}
+          />
+
+          {/* Sound ON label */}
+          <div
+            onClick={() => onSoundToggle(true)}
+            style={{
+              position: 'absolute', top: 241, left: 550,
+              fontFamily: '"Lato Black"', fontSize: '14pt',
+              color: soundEffectsOn ? '#393739' : '#575758',
+              cursor: 'pointer',
+            }}
+          >
+            ON
+          </div>
+
+          {/* Sound OFF label */}
+          <div
+            onClick={() => onSoundToggle(false)}
+            style={{
+              position: 'absolute', top: 241, left: 608,
+              fontFamily: '"Lato Black"', fontSize: '14pt',
+              color: !soundEffectsOn ? '#393739' : '#575758',
+              cursor: 'pointer',
+            }}
+          >
+            OFF
+          </div>
+
+          {/* Theme Music label */}
+          <div style={{
+            position: 'absolute', top: 330, left: 341,
+            fontFamily: '"Lato Black"', fontSize: '18pt', color: '#393739',
+          }}>
+            THEME MUSIC
+          </div>
+
+          {/* Theme Music slider */}
+          <div
+            onClick={() => onMusicToggle(!themeMusicOn)}
+            style={{
+              position: 'absolute', top: 320,
+              left: themeMusicOn ? 536 : 595,
+              width: 62, height: 52,
+              backgroundImage: 'url(/images/Settings-Slider.png)',
+              cursor: 'pointer',
+              transition: 'left 0.15s',
+            }}
+          />
+
+          {/* Music ON label */}
+          <div
+            onClick={() => onMusicToggle(true)}
+            style={{
+              position: 'absolute', top: 332, left: 550,
+              fontFamily: '"Lato Black"', fontSize: '14pt',
+              color: themeMusicOn ? '#393739' : '#575758',
+              cursor: 'pointer',
+            }}
+          >
+            ON
+          </div>
+
+          {/* Music OFF label */}
+          <div
+            onClick={() => onMusicToggle(false)}
+            style={{
+              position: 'absolute', top: 332, left: 608,
+              fontFamily: '"Lato Black"', fontSize: '14pt',
+              color: !themeMusicOn ? '#393739' : '#575758',
+              cursor: 'pointer',
+            }}
+          >
+            OFF
+          </div>
+
+          {/* Done button */}
+          <div style={{ position: 'absolute', left: 400, top: 410, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-leftcurve.png)' }} />
+          <div
+            onClick={() => setShowSettings(false)}
+            style={{
+              position: 'absolute', left: 444, top: 430, width: 100, height: 40,
+              backgroundImage: 'url(/images/SilverButton-centervertical.png)',
+              backgroundRepeat: 'repeat-x',
+              fontFamily: '"Lato Black"', fontSize: '16.5pt', color: '#393739',
+              textAlign: 'center', lineHeight: '160%',
+              cursor: 'pointer',
+            }}
+          >
+            DONE
+          </div>
+          <div style={{ position: 'absolute', left: 544, top: 410, width: 45, height: 60, backgroundImage: 'url(/images/SilverButton-rightcurve.png)' }} />
+        </div>
+      )}
+
       {/* Game Over - 1 player */}
-      {phase === 'gameOver' && mode === '1player' && (
+      {phase === 'gameOver' && mode === '1player' && !showNameEntry && (
         <div
           style={{
             position: 'absolute',
@@ -699,17 +906,121 @@ export default function GamePage({ mode, soundEffectsOn, onMainMenu }: GamePageP
           <div style={{ position: 'absolute', top: 85, left: 45, font: '15pt "Lato Black"', color: '#ffc220' }}>
             LEVEL REACHED: {level}
           </div>
+          {!scoreSaved && (
+            <div
+              onClick={() => setShowNameEntry(true)}
+              style={{ position: 'absolute', top: 125, left: 70, font: '14pt "Lato Black"', color: '#ffc220', cursor: 'pointer' }}
+            >
+              SAVE SCORE
+            </div>
+          )}
           <div
-            onClick={() => handleGameOverAction('playAgain')}
-            style={{ position: 'absolute', top: 130, left: 70, font: '16.5pt "Lato Black"', color: '#393739', cursor: 'pointer' }}
+            onClick={() => { setScoreSaved(false); handleGameOverAction('playAgain'); }}
+            style={{ position: 'absolute', top: scoreSaved ? 125 : 155, left: 70, font: '14pt "Lato Black"', color: '#393739', cursor: 'pointer' }}
           >
             PLAY AGAIN
           </div>
           <div
-            onClick={() => handleGameOverAction('mainMenu')}
-            style={{ position: 'absolute', top: 180, left: 70, font: '16.5pt "Lato Black"', color: '#393739', cursor: 'pointer' }}
+            onClick={() => { setScoreSaved(false); handleGameOverAction('mainMenu'); }}
+            style={{ position: 'absolute', top: scoreSaved ? 155 : 185, left: 70, font: '14pt "Lato Black"', color: '#393739', cursor: 'pointer' }}
           >
             MAIN MENU
+          </div>
+        </div>
+      )}
+
+      {/* Name Entry Dialog */}
+      {phase === 'gameOver' && showNameEntry && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 150,
+            left: 312,
+            width: 400,
+            height: 280,
+            background: 'rgba(0, 0, 0, 0.92)',
+            border: '2px solid #ffc220',
+            borderRadius: 12,
+            padding: 20,
+          }}
+        >
+          <div style={{ font: '22pt Oswald', color: '#ffc220', textAlign: 'center', marginBottom: 10 }}>
+            SAVE YOUR SCORE
+          </div>
+          <div style={{ font: '30pt Oswald', color: '#e0e0e1', textAlign: 'center' }}>
+            {score} <span style={{ font: '14pt "Lato Black"', color: '#929497' }}>PTS</span>
+            <span style={{ font: '14pt "Lato Black"', color: '#929497', marginLeft: 20 }}>LEVEL {level}</span>
+          </div>
+          <div style={{ marginTop: 20, textAlign: 'center' }}>
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value.slice(0, 20))}
+              placeholder="ENTER YOUR NAME"
+              maxLength={20}
+              autoFocus
+              style={{
+                width: 280,
+                padding: '10px 16px',
+                font: '14pt Oswald',
+                color: '#e0e0e1',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid #ffc220',
+                borderRadius: 6,
+                outline: 'none',
+                textAlign: 'center',
+                letterSpacing: '0.05em',
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && playerName.trim()) {
+                  const name = playerName.trim();
+                  fetch('/api/leaderboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, score, level, type: 'human' }),
+                  })
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data.ok && data.entry) {
+                        setShowNameEntry(false);
+                        setScoreSaved(true);
+                        onScoreSubmitted?.(data.entry.id);
+                      }
+                    })
+                    .catch(() => {});
+                }
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 30, marginTop: 20 }}>
+            <div
+              onClick={() => {
+                const name = playerName.trim() || 'PLAYER';
+                fetch('/api/leaderboard', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name, score, level, type: 'human' }),
+                })
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data.ok && data.entry) {
+                      setShowNameEntry(false);
+                      setScoreSaved(true);
+                      onScoreSubmitted?.(data.entry.id);
+                    }
+                  })
+                  .catch(() => {});
+              }}
+              style={{ font: '16pt "Lato Black"', color: '#ffc220', cursor: 'pointer' }}
+            >
+              SUBMIT
+            </div>
+            <div
+              onClick={() => setShowNameEntry(false)}
+              style={{ font: '16pt "Lato Black"', color: '#929497', cursor: 'pointer' }}
+            >
+              CANCEL
+            </div>
           </div>
         </div>
       )}

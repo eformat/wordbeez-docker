@@ -1,0 +1,12 @@
+.git
+bin
+wbee-1.0
+chart
+Dockerfile
+*.md
+wordswarm-next/node_modules
+wordswarm-next/.next
+wordswarm-agent/.venv
+wordswarm-agent/__pycache__
+**/*.egg-info
+.env*

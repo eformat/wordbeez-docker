@@ -1,0 +1,43 @@
+# Build context must be the repo root (not wordswarm-next/)
+# Build stage
+FROM registry.access.redhat.com/ubi9/nodejs-20 AS builder
+
+USER 0
+WORKDIR /opt/app-root/src
+
+COPY wordswarm-next/package*.json ./
+RUN npm ci
+
+COPY wordswarm-next/ .
+RUN npm run build
+
+# Production stage — uses full nodejs-20 (not minimal) because we need python3
+# for spawning the agent subprocess from the dashboard
+FROM registry.access.redhat.com/ubi9/nodejs-20 AS runner
+
+USER 0
+WORKDIR /opt/app-root/src
+
+# Install Python 3.12 and the agent package
+RUN dnf install -y python3.12 python3.12-pip && \
+    dnf clean all
+COPY wordswarm-agent/ /tmp/wordswarm-agent/
+RUN python3.12 -m pip install --no-cache-dir /tmp/wordswarm-agent && \
+    rm -rf /tmp/wordswarm-agent
+
+# Copy Next.js standalone build
+COPY --from=builder /opt/app-root/src/public ./public
+COPY --from=builder /opt/app-root/src/.next/standalone ./
+COPY --from=builder /opt/app-root/src/.next/static ./.next/static
+
+ENV NODE_ENV=production
+ENV PORT=8080
+
+USER 1001
+
+EXPOSE 8080
+
+# HOSTNAME env var is set by Kubernetes to the pod name, which causes
+# Next.js standalone to bind to the pod hostname instead of 0.0.0.0.
+# Override it at runtime so it binds to all interfaces.
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 node server.js"]

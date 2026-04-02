@@ -1,0 +1,18 @@
+FROM registry.access.redhat.com/ubi9/python-312:9.7
+
+USER 0
+WORKDIR /opt/app-root/src
+
+# Install dependencies first for layer caching
+COPY pyproject.toml ./
+COPY src/ ./src/
+
+RUN pip install --no-cache-dir . && \
+    fix-permissions /opt/app-root
+
+USER 1001
+
+# Agent connects to game server via GAME_URL env var
+ENV PYTHONUNBUFFERED=1
+
+CMD ["wordswarm-agent"]

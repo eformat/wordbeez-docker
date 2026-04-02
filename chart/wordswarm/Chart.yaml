@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wordswarm
+description: WordSwarm AI Demo — honeycomb word game played by a LangChain agent
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

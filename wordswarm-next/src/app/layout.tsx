@@ -17,12 +17,6 @@ export default function RootLayout({
         style={{
           margin: 0,
           padding: 0,
-          backgroundColor: '#000',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          overflow: 'hidden',
         }}
       >
         {children}

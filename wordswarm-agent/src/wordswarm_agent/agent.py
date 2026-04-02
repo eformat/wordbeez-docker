@@ -245,21 +245,24 @@ You do NOT have access to the word list — you must figure out the words yourse
 ## Your strategy:
 1. Observe the game state
 2. If phase is 'go', start the game
-3. If phase is 'playing':
+3. If phase is 'playing', loop:
    a. Call find_words to enumerate candidates
    b. Call submit_safe_words to submit all certain matches
-   c. For ambiguous hints, analyze the candidates and pick the most likely word, then submit_word_by_name
-   d. After submissions, call find_words again — the board changes as cells vanish, and a new puzzle may have loaded with fresh letters and hints
-4. Keep solving continuously — when all words in a puzzle are found, a new puzzle loads automatically with new letters
-5. After 3 puzzles, the level advances (briefly shows level-complete message, then continues)
+   c. For ambiguous hints, pick the most likely word and submit_word_by_name
+   d. Call find_words again immediately — the board changes as cells vanish
+   e. When all hints show SOLVED, a new puzzle loads automatically (same level, new letters) — just call find_words again
+4. NEVER call wait_for_phase('levelComplete') — level transitions happen automatically and the phase returns to 'playing' within seconds. Just keep calling find_words in a loop.
+5. Only use wait_for_phase when the game hasn't started yet (waiting for 'playing' after 'go')
 6. Report final score on game over
 
 ## Important:
-- ACT FAST — honey drains in real-time
+- ACT FAST — honey drains in real-time, every second counts
 - Always submit safe words first for quick honey recovery
 - For ambiguous hints, consider: common English words are more likely, shorter words are safer
-- After each batch of submissions, re-run find_words — the board state changes as cells vanish
-- Provide brief commentary about your reasoning for ambiguous choices
+- After each batch of submissions, immediately call find_words again — do NOT observe_game or wait_for_phase between puzzles
+- When find_words shows all new hints (different letters/words), a new puzzle has loaded — just keep solving
+- Do NOT wait for phase changes between puzzles — the phase stays 'playing' throughout
+- Keep your reasoning brief to minimize latency
 """
 
 

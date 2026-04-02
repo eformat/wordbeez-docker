@@ -88,14 +88,15 @@ def main():
     agent = create_agent()
 
     initial_message = (
-        "Play the WordSwarm game! Observe the game state, start the game when ready, "
-        "and solve puzzles as fast as you can. Try to reach the highest level possible. "
-        "Give brief updates on your progress after each major action."
+        "Play the WordSwarm game! Observe the game state first. "
+        "If the phase is 'go', call start_game. If already 'playing', jump straight into find_words. "
+        "Solve puzzles as fast as you can — call find_words, submit_safe_words, repeat. "
+        "Never wait between puzzles, just keep calling find_words."
     )
 
     continue_message = (
-        "Continue playing! Check the game state and keep solving puzzles. "
-        "Submit words as fast as you can — honey is draining."
+        "Continue playing! Call find_words immediately and keep solving. "
+        "Do not observe or wait — just find and submit words as fast as possible."
     )
 
     messages = [{"role": "user", "content": initial_message}]

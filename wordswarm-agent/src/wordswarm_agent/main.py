@@ -81,18 +81,38 @@ def main():
             print(f"  Waiting for game server... (attempt {attempt}/{max_attempts})")
             time.sleep(2)
 
+    # Check current phase to give the agent the right starting instruction
+    try:
+        client = GameClient()
+        state = client.get_blind_state()
+        current_phase = state.phase
+        client.close()
+    except Exception:
+        current_phase = "unknown"
+
     print()
     print("Starting agent... (press Ctrl+C to stop)")
     print("-" * 60)
 
     agent = create_agent()
 
-    initial_message = (
-        "Play the WordSwarm game! Observe the game state first. "
-        "If the phase is 'go', call start_game. If already 'playing', jump straight into find_words. "
-        "Solve puzzles as fast as you can — call find_words, submit_safe_words, repeat. "
-        "Never wait between puzzles, just keep calling find_words."
-    )
+    if current_phase == "playing":
+        initial_message = (
+            "The game is already playing! Call find_words immediately to find words on the board. "
+            "Then call submit_safe_words to submit certain matches. Keep looping: find_words → submit_safe_words → find_words. "
+            "Do NOT call observe_game or wait_for_phase — just find and submit words as fast as possible."
+        )
+    elif current_phase == "go":
+        initial_message = (
+            "The game is ready to start. Call start_game now, then immediately call find_words. "
+            "Keep looping: find_words → submit_safe_words → find_words. Act fast, honey is draining."
+        )
+    else:
+        initial_message = (
+            "Observe the game state with observe_game. If phase is 'go', call start_game. "
+            "If phase is 'playing', call find_words immediately. "
+            "Keep looping: find_words → submit_safe_words → find_words."
+        )
 
     continue_message = (
         "Continue playing! Call find_words immediately and keep solving. "

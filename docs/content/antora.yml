@@ -9,3 +9,4 @@ asciidoc:
     wordswarm_url: "https://red.ht/wordswarm"
     maas_api_url: "http://maas.apps.ocp.cloud.rhai-tmm.dev"
     model_token: "$TOKEN"
+    page-pagination: ""

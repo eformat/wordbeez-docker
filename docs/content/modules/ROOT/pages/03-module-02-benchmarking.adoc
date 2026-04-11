@@ -22,21 +22,24 @@ By the end of this module, you'll be able to:
 
 . Install GuideLLM via pip:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 pip install guidellm
 ----
 
 . Verify the installation:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 guidellm --version
 ----
 
 . Export your API token:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 export TOKEN="your-bearer-token-here"
 ----
@@ -53,7 +56,8 @@ kimi-k2-5 is the top-performing model on the WordSwarm leaderboard. Let's measur
 
 . Run the benchmark:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 guidellm benchmark \
   --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1" \
@@ -82,7 +86,8 @@ Nemotron-Cascade-2-30B uses a cascade architecture: 30B total parameters but onl
 
 . Run the benchmark:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 guidellm benchmark \
   --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/nemotron-cascade/nemotron-cascade-2-30b/v1" \
@@ -105,7 +110,8 @@ Llama-4-Scout uses W4A16 quantization to fit on 2x MIG slices. Let's see how qua
 
 . Run the benchmark:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 guidellm benchmark \
   --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/llama4-scout/llama-4-scout-17b/v1" \
@@ -128,7 +134,8 @@ The smallest model in the lineup. Runs on a single 18 GB MIG slice.
 
 . Run the benchmark:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 guidellm benchmark \
   --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/llama32-3b/llama-3.2-3b-instruct/v1" \
@@ -230,7 +237,8 @@ GuideLLM supports different load profiles. Try sweeping concurrency:
 
 . **Synchronous** (1 request at a time):
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 guidellm benchmark \
   --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1" \
@@ -243,7 +251,8 @@ guidellm benchmark \
 
 . **Concurrent with higher rate**:
 +
-[source,bash,role=copy]
+[.copypaste]
+[source,bash]
 ----
 guidellm benchmark \
   --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1" \

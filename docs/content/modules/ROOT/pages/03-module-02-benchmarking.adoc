@@ -64,9 +64,10 @@ guidellm benchmark \
   --backend-kwargs '{"api_key": "'$TOKEN'"}' \
   --profile concurrent \
   --rate 10 \
-  --model moonshotai/Kimi-K2.5 \
+  --model kimi-k2-5 \
   --data "prompt_tokens=64,output_tokens=128" \
-  --max-seconds 30
+  --max-seconds 30 \
+  --processor "gpt2"
 ----
 
 . Review the output metrics:
@@ -90,13 +91,14 @@ Nemotron-Cascade-2-30B uses a cascade architecture: 30B total parameters but onl
 [source,bash]
 ----
 guidellm benchmark \
-  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/nemotron-cascade/nemotron-cascade-2-30b/v1" \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/nemotron-cascade-2-30b/v1" \
   --backend-kwargs '{"api_key": "'$TOKEN'"}' \
   --profile concurrent \
   --rate 10 \
-  --model nvidia/Nemotron-Cascade-2-30B-A3B \
+  --model nemotron-cascade-2-30b \
   --data "prompt_tokens=64,output_tokens=128" \
-  --max-seconds 30
+  --max-seconds 30 \
+  --processor "gpt2"
 ----
 
 === Verify
@@ -114,13 +116,14 @@ Llama-4-Scout uses W4A16 quantization to fit on 2x MIG slices. Let's see how qua
 [source,bash]
 ----
 guidellm benchmark \
-  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/llama4-scout/llama-4-scout-17b/v1" \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/llama-4-scout-17b-16e-w4a16/v1" \
   --backend-kwargs '{"api_key": "'$TOKEN'"}' \
   --profile concurrent \
   --rate 10 \
-  --model meta-llama/Llama-4-Scout-17B-16E-W4A16 \
+  --model llama-4-scout-17b-16e-w4a16 \
   --data "prompt_tokens=64,output_tokens=128" \
-  --max-seconds 30
+  --max-seconds 30 \
+  --processor "gpt2"
 ----
 
 === Verify
@@ -138,13 +141,14 @@ The smallest model in the lineup. Runs on a single 18 GB MIG slice.
 [source,bash]
 ----
 guidellm benchmark \
-  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/llama32-3b/llama-3.2-3b-instruct/v1" \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/llama-32-3b/v1" \
   --backend-kwargs '{"api_key": "'$TOKEN'"}' \
   --profile concurrent \
   --rate 10 \
-  --model meta-llama/Llama-3.2-3B-Instruct \
+  --model llama-32-3b \
   --data "prompt_tokens=64,output_tokens=128" \
-  --max-seconds 30
+  --max-seconds 30 \
+  --processor "gpt2"
 ----
 
 === Verify
@@ -244,9 +248,10 @@ guidellm benchmark \
   --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1" \
   --backend-kwargs '{"api_key": "'$TOKEN'"}' \
   --profile synchronous \
-  --model moonshotai/Kimi-K2.5 \
+  --model kimi-k2-5 \
   --data "prompt_tokens=64,output_tokens=128" \
-  --max-seconds 30
+  --max-seconds 30 \
+  --processor "gpt2"
 ----
 
 . **Concurrent with higher rate**:
@@ -259,9 +264,10 @@ guidellm benchmark \
   --backend-kwargs '{"api_key": "'$TOKEN'"}' \
   --profile concurrent \
   --rate 50 \
-  --model moonshotai/Kimi-K2.5 \
+  --model kimi-k2-5 \
   --data "prompt_tokens=64,output_tokens=128" \
-  --max-seconds 30
+  --max-seconds 30 \
+  --processor "gpt2"
 ----
 
 Compare how throughput and latency change under different concurrency levels.

@@ -82,7 +82,7 @@ Here's what fell out after 13 runs across 4 models:
 
 In this workshop you'll explore two key aspects:
 
-* **Module 1: Reasoning Prompting** -- Use `/think` and `/no_think` to control how models reason through problems
+* **Module 1: Reasoning Prompting** -- Use `/think` and `/no-think` to control how models reason through problems
 * **Module 2: GuideLLM Benchmarking** -- Measure model throughput, latency, and concurrency using synthetic benchmarks
 
 Click **Module 1** in the navigation to begin.

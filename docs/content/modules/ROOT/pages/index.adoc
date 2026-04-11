@@ -6,7 +6,7 @@ Welcome to the WordSwarm AI workshop!
 
 In this workshop, you will:
 
-* **Play with reasoning models** — use `/think` and `/no_think` prompting to control LLM reasoning behavior in a live AI agent
+* **Play with reasoning models** — use `/think` and `/no-think` prompting to control LLM reasoning behavior in a live AI agent
 * **Benchmark MaaS models** — use GuideLLM to measure throughput, latency, and concurrency of models served via vLLM on OpenShift
 * **Compare model performance** — see how different models (kimi-k2-5, Nemotron, Llama, Gemma) perform on real-time tasks vs. synthetic benchmarks
 
@@ -20,7 +20,7 @@ image::dashboard-overview.png[WordSwarm AI Dashboard,link=self,window=blank,widt
 
 This workshop is designed for AI/ML engineers, platform engineers, and developers who want hands-on experience with:
 
-* LLM reasoning capabilities (`/think`, `/no_think`)
+* LLM reasoning capabilities (`/think`, `/no-think`)
 * Model benchmarking with GuideLLM
 * Model-as-a-Service (MaaS) on OpenShift with vLLM
 

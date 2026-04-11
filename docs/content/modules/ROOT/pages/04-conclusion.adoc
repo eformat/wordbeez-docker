@@ -6,14 +6,14 @@ Congratulations! You've completed the WordSwarm AI workshop.
 
 == What you accomplished
 
-* **Module 1: Reasoning Prompting** -- Explored `/think` and `/no_think` to control LLM reasoning behavior, measured the latency-quality tradeoff, and watched reasoning models outperform non-reasoning models on the WordSwarm game
+* **Module 1: Reasoning Prompting** -- Explored `/think` and `/no-think` to control LLM reasoning behavior, measured the latency-quality tradeoff, and watched reasoning models outperform non-reasoning models on the WordSwarm game
 * **Module 2: GuideLLM Benchmarking** -- Benchmarked four models across different architectures and GPU allocations, compared synthetic throughput with real-world game performance, and explored concurrency profiles
 
 == Key takeaways
 
 === Reasoning matters for complex tasks
 
-kimi-k2-5 dominates the WordSwarm leaderboard because it *reasons* through ambiguity. Smaller models are faster but can't follow a game loop reliably. The `/think` and `/no_think` tags give you direct control over this tradeoff.
+kimi-k2-5 dominates the WordSwarm leaderboard because it *reasons* through ambiguity. Smaller models are faster but can't follow a game loop reliably. The `/think` and `/no-think` tags give you direct control over this tradeoff.
 
 === Benchmarks vs. reality
 

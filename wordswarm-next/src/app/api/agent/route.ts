@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { startAgent, stopAgent, getAgentState, getLogsSince } from '@/lib/agentProcess';
+import { getSelectedModel } from '@/lib/gameStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,10 +29,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: 'MODEL_TOKEN env var not set' }, { status: 500 });
     }
     const gameUrl = `http://127.0.0.1:${process.env.PORT || 3000}`;
+    const saved = getSelectedModel();
     const result = startAgent({
       GAME_URL: gameUrl,
-      MODEL_URL: body.modelUrl || 'https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1',
-      MODEL_NAME: body.modelName || 'kimi-k2-5',
+      MODEL_URL: body.modelUrl || saved?.url || 'https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1',
+      MODEL_NAME: body.modelName || saved?.id || 'kimi-k2-5',
       MODEL_TOKEN: token,
     });
     return NextResponse.json(result);

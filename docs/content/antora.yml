@@ -1,0 +1,11 @@
+name: modules
+title: "WordSwarm AI Workshop"
+version: ~
+nav:
+  - modules/ROOT/nav.adoc
+asciidoc:
+  attributes:
+    lab_name: "WordSwarm AI: Reasoning & Benchmarking Workshop"
+    wordswarm_url: "https://red.ht/wordswarm"
+    maas_api_url: "http://maas.apps.ocp.cloud.rhai-tmm.dev"
+    model_token: "$TOKEN"

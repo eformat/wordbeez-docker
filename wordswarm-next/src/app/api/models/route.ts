@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { setSelectedModel } from '@/lib/gameStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,4 +50,14 @@ export async function GET() {
       { status: 500 },
     );
   }
+}
+
+// POST /api/models — save selected model for 2P auto-start
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const { id, url } = body;
+  if (id && url) {
+    setSelectedModel({ id, url });
+  }
+  return NextResponse.json({ ok: true });
 }

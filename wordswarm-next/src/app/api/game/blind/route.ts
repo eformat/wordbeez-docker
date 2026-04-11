@@ -32,5 +32,7 @@ export async function GET() {
     honeycombVisible: state.honeycombVisible,
     hints,
     mode: state.mode,
+    playerId: state.playerId,
+    player1Score: state.player1Score,
   });
 }

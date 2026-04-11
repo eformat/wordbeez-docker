@@ -1,0 +1,11 @@
+* xref:index.adoc[Welcome]
+
+.Workshop
+* xref:01-overview.adoc[Workshop Overview]
+
+.Modules
+* xref:02-module-01-reasoning.adoc[Module 1: Reasoning Prompting]
+* xref:03-module-02-benchmarking.adoc[Module 2: GuideLLM Benchmarking]
+
+.Wrap-up
+* xref:04-conclusion.adoc[Conclusion]

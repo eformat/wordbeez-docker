@@ -61,6 +61,7 @@ let _startedAt: string | null = null;
 let _logCounter = 0;
 let _stats: AgentStats = { ...EMPTY_STATS };
 let _modelName: string = '';
+let _scoreSaved = false;
 
 const MAX_LOGS = 500;
 
@@ -134,6 +135,7 @@ export function startAgent(env: Record<string, string>): { ok: boolean; message:
   _stats = { ...EMPTY_STATS };
   _startedAt = new Date().toISOString();
   _modelName = env.MODEL_NAME || '';
+  _scoreSaved = false;
 
   addLog('Starting WordSwarm agent...');
 
@@ -207,10 +209,11 @@ export function startAgent(env: Record<string, string>): { ok: boolean; message:
   _process.on('close', (code: number | null) => {
     addLog(`Agent process exited (code: ${code})`);
 
-    // Auto-submit agent score to leaderboard
+    // Auto-submit agent score to leaderboard (once per run)
     try {
       const gameState = getGameState();
-      if (gameState.score > 0) {
+      if (gameState.score > 0 && !_scoreSaved) {
+        _scoreSaved = true;
         const totalTokens = _stats.total_input_tokens + _stats.total_output_tokens;
         const tokensPerSec = _stats.total_latency_ms > 0
           ? ((_stats.total_output_tokens / _stats.total_latency_ms) * 1000)

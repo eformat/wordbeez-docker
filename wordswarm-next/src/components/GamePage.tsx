@@ -59,6 +59,8 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
   const [playerId, setPlayerId] = useState(1);
   const [player1Score, setPlayer1Score] = useState(0);
   const [showP1Score, setShowP1Score] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<'idle' | 'starting' | 'running' | 'error'>('idle');
+  const agentStartedRef = useRef(false);
 
   const wordsDataRef = useRef<string[]>([]);
   const wordsUsedRef = useRef<Set<number>>(new Set());
@@ -389,6 +391,53 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
     }
   }, [phase, mode, playerId]);
 
+  // Auto-start agent when it's Player 2's turn in 2P mode
+  useEffect(() => {
+    if (mode !== '2players' || playerId !== 2) return;
+
+    if (phase === 'go' && !agentStartedRef.current) {
+      agentStartedRef.current = true;
+      setAgentStatus('starting');
+      fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start' }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log('[2P] Agent start response:', data);
+          if (data.ok) {
+            setAgentStatus('running');
+          } else {
+            console.error('[2P] Agent failed to start:', data.message);
+            setAgentStatus('error');
+          }
+        })
+        .catch((err) => {
+          console.error('[2P] Agent start fetch error:', err);
+          setAgentStatus('error');
+        });
+    }
+
+    if (phase === 'gameOver' && agentStartedRef.current) {
+      agentStartedRef.current = false;
+      setAgentStatus('idle');
+      fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop' }),
+      }).catch(() => {});
+    }
+  }, [mode, playerId, phase]);
+
+  // Reset agent flag when switching back to Player 1
+  useEffect(() => {
+    if (playerId === 1) {
+      agentStartedRef.current = false;
+      setAgentStatus('idle');
+    }
+  }, [playerId]);
+
   const get2PlayerWinner = () => {
     if (scoreRef.current > player1Score) return 2;
     if (scoreRef.current < player1Score) return 1;
@@ -684,23 +733,39 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
           <div style={{ position: 'absolute', marginTop: 105, width: '100%', textAlign: 'center', font: '24pt Oswald', color: '#ffc220' }}>
             GET READY!
           </div>
-          <div style={{ position: 'absolute', marginTop: 160, width: '100%', textAlign: 'center', font: '14pt "Lato Black"', color: '#393739' }}>
-            PLAYER {playerId}
-          </div>
-          <div
-            onClick={startGame}
-            style={{
-              position: 'absolute',
-              marginTop: 180,
-              width: '100%',
-              textAlign: 'center',
-              font: '29pt "Lato Black"',
-              color: '#393739',
-              cursor: 'pointer',
-            }}
-          >
-            GO
-          </div>
+          {playerId === 1 ? (
+            <>
+              <div style={{ position: 'absolute', marginTop: 160, width: '100%', textAlign: 'center', font: '14pt "Lato Black"', color: '#393739' }}>
+                PLAYER 1
+              </div>
+              <div
+                onClick={startGame}
+                style={{
+                  position: 'absolute',
+                  marginTop: 180,
+                  width: '100%',
+                  textAlign: 'center',
+                  font: '29pt "Lato Black"',
+                  color: '#393739',
+                  cursor: 'pointer',
+                }}
+              >
+                GO
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ position: 'absolute', marginTop: 140, width: '100%', textAlign: 'center', font: '14pt "Lato Black"', color: '#ffc220' }}>
+                AI AGENT&apos;S TURN
+              </div>
+              <div style={{ position: 'absolute', marginTop: 165, width: '100%', textAlign: 'center', font: '11pt "Lato Black"', color: agentStatus === 'error' ? '#ff4444' : '#929497' }}>
+                {agentStatus === 'starting' && 'STARTING AGENT...'}
+                {agentStatus === 'running' && 'AGENT RUNNING...'}
+                {agentStatus === 'error' && 'AGENT FAILED TO START'}
+                {agentStatus === 'idle' && 'WAITING...'}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1042,7 +1107,7 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
             return (
               <>
                 <div style={{ position: 'absolute', marginTop: 28, width: '100%', textAlign: 'center', font: '24pt Oswald', color: '#e0e0e1' }}>
-                  {winner === 0 ? 'GAME' : `PLAYER ${winner}`}
+                  {winner === 0 ? 'GAME' : winner === 1 ? 'PLAYER 1' : 'AI AGENT'}
                 </div>
                 <div style={{ position: 'absolute', marginTop: 60, width: '100%', textAlign: 'center', font: '30pt Oswald', color: '#ffc220' }}>
                   {winner === 0 ? 'TIES!' : 'WINS!'}
@@ -1101,7 +1166,7 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
                 {player1Score}
               </div>
               <div style={{ position: 'absolute', top: 20, width: 130, left: 665, font: '20pt "Lato Black"' }}>
-                PLAYER 2
+                AI AGENT
               </div>
             </>
           )}

@@ -37,11 +37,19 @@ podman-run: podman-stop
 	podman pod create --name $(POD_NAME) -p 8080:8080
 	podman run -d --pod $(POD_NAME) --name $(POD_NAME)-game \
 		-e MODEL_TOKEN="$${MODEL_TOKEN}" \
+		-v wordswarm-data:/data:Z \
 		$(GAME_IMG)
 	podman run -d --pod $(POD_NAME) --name $(POD_NAME)-agent \
 		-e GAME_URL=http://localhost:8080 \
 		-e MODEL_TOKEN="$${MODEL_TOKEN}" \
 		$(AGENT_IMG)
+
+podman-run-game: podman-stop
+	podman pod create --name $(POD_NAME) -p 8080:8080
+	podman run -d --pod $(POD_NAME) --name $(POD_NAME)-game \
+		-e MODEL_TOKEN="$${MODEL_TOKEN}" \
+		-v wordswarm-data:/data:Z \
+		$(GAME_IMG)
 
 podman-stop:
 	-podman pod rm -f $(POD_NAME) 2>/dev/null

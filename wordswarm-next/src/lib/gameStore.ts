@@ -77,3 +77,19 @@ export function popActions(): GameAction[] {
   _pendingActions = [];
   return actions;
 }
+
+// Selected model — set by dashboard, read by 2P auto-start
+interface SelectedModel {
+  id: string;
+  url: string;
+}
+
+let _selectedModel: SelectedModel | null = null;
+
+export function setSelectedModel(model: SelectedModel): void {
+  _selectedModel = model;
+}
+
+export function getSelectedModel(): SelectedModel | null {
+  return _selectedModel;
+}

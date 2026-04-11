@@ -1,0 +1,7 @@
+www/
+.cache/
+node_modules/
+.vscode/
+.idea/
+*.log
+.env

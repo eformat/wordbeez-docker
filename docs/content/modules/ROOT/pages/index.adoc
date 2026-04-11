@@ -1,0 +1,41 @@
+= WordSwarm AI: Reasoning & Benchmarking Workshop
+
+Welcome to the WordSwarm AI workshop!
+
+== What you'll learn
+
+In this workshop, you will:
+
+* **Play with reasoning models** — use `/think` and `/no_think` prompting to control LLM reasoning behavior in a live AI agent
+* **Benchmark MaaS models** — use GuideLLM to measure throughput, latency, and concurrency of models served via vLLM on OpenShift
+* **Compare model performance** — see how different models (kimi-k2-5, Nemotron, Llama, Gemma) perform on real-time tasks vs. synthetic benchmarks
+
+== The game
+
+WordSwarm is a honeycomb word game (originally Intel Corp, 2012) with an AI agent bolted on. The agent plays autonomously against a ticking clock — it enumerates adjacency paths through a 17-cell hex grid, matches them against a dictionary, and uses an LLM to handle ambiguous cases.
+
+image::dashboard-overview.png[WordSwarm AI Dashboard,link=self,window=blank,width=700]
+
+== Who this is for
+
+This workshop is designed for AI/ML engineers, platform engineers, and developers who want hands-on experience with:
+
+* LLM reasoning capabilities (`/think`, `/no_think`)
+* Model benchmarking with GuideLLM
+* Model-as-a-Service (MaaS) on OpenShift with vLLM
+
+**Experience level**: Beginner to Intermediate
+
+== Prerequisites
+
+* A terminal with `curl` and `pip` installed
+* Access to the MaaS API endpoint
+* A valid `$TOKEN` for the MaaS API
+
+== Estimated time
+
+This workshop takes approximately **30 minutes** to complete.
+
+== Let's get started!
+
+Click on **Workshop Overview** in the navigation to begin.

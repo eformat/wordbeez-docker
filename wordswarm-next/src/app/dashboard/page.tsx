@@ -136,6 +136,18 @@ export default function Dashboard() {
     fetchModels();
   }, []);
 
+  // Sync selected model to server (for 2P auto-start)
+  useEffect(() => {
+    if (!selectedModel) return;
+    const model = models.find(m => m.id === selectedModel);
+    if (!model) return;
+    fetch('/api/models', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: model.id, url: model.url }),
+    }).catch(() => {});
+  }, [selectedModel, models]);
+
   // Poll for game state
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -181,6 +193,23 @@ export default function Dashboard() {
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
+
+  // Detect when agent is started externally (e.g. 2P auto-start)
+  useEffect(() => {
+    const detectInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/agent');
+        const data = await res.json();
+        if (data.running && !agentRunning) {
+          setAgentRunning(true);
+          setLogs([]);
+          logIndexRef.current = 0;
+          startPolling();
+        }
+      } catch {}
+    }, 1000);
+    return () => clearInterval(detectInterval);
+  }, [agentRunning, startPolling]);
 
   // Auto-scroll logs
   useEffect(() => {

@@ -1,0 +1,284 @@
+= Module 2: GuideLLM benchmarking
+:navtitle: Module 2: GuideLLM Benchmarking
+:source-highlighter: rouge
+:toc: macro
+:toclevels: 1
+:icons: font
+
+GuideLLM is an open source tool for benchmarking LLM inference endpoints. It measures throughput, latency, time-to-first-token, and concurrency behavior -- exactly the metrics that matter when serving models via MaaS on OpenShift.
+
+In this module, you'll benchmark several models from the MaaS platform and compare their performance profiles.
+
+== Learning objectives
+
+By the end of this module, you'll be able to:
+
+* Install and configure GuideLLM
+* Run benchmarks against MaaS model endpoints
+* Interpret throughput, latency, and TTFT metrics
+* Compare model performance across different architectures and GPU allocations
+
+== Exercise 1: Install GuideLLM
+
+. Install GuideLLM via pip:
++
+[source,bash]
+----
+pip install guidellm
+----
+
+. Verify the installation:
++
+[source,bash]
+----
+guidellm --version
+----
+
+. Export your API token:
++
+[source,bash]
+----
+export TOKEN="your-bearer-token-here"
+----
+
+=== Verify
+
+✓ GuideLLM is installed +
+✓ `guidellm --version` returns a version number +
+✓ Token is exported
+
+== Exercise 2: Benchmark kimi-k2-5 (reasoning model)
+
+kimi-k2-5 is the top-performing model on the WordSwarm leaderboard. Let's measure its raw inference performance.
+
+. Run the benchmark:
++
+[source,bash]
+----
+guidellm benchmark \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1" \
+  --backend-kwargs '{"api_key": "'$TOKEN'"}' \
+  --profile concurrent \
+  --rate 10 \
+  --model moonshotai/Kimi-K2.5 \
+  --data "prompt_tokens=64,output_tokens=128" \
+  --max-seconds 30
+----
+
+. Review the output metrics:
+* **Throughput (req/s)** -- how many requests per second the endpoint can handle
+* **Latency (p50/p95/p99)** -- response time distribution
+* **TTFT** -- time to first token
+* **Tokens/sec** -- output token generation speed
+
+=== Verify
+
+✓ Benchmark completes without errors +
+✓ Output shows throughput, latency, and TTFT metrics
+
+== Exercise 3: Benchmark Nemotron Cascade (efficient MoE)
+
+Nemotron-Cascade-2-30B uses a cascade architecture: 30B total parameters but only 3B active per forward pass. It runs on a single 71 GB MIG slice.
+
+. Run the benchmark:
++
+[source,bash]
+----
+guidellm benchmark \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/nemotron-cascade/nemotron-cascade-2-30b/v1" \
+  --backend-kwargs '{"api_key": "'$TOKEN'"}' \
+  --profile concurrent \
+  --rate 10 \
+  --model nvidia/Nemotron-Cascade-2-30B-A3B \
+  --data "prompt_tokens=64,output_tokens=128" \
+  --max-seconds 30
+----
+
+=== Verify
+
+✓ Benchmark completes +
+✓ Note the throughput -- Nemotron's cascade architecture should show high token/s
+
+== Exercise 4: Benchmark Llama 4 Scout (quantized)
+
+Llama-4-Scout uses W4A16 quantization to fit on 2x MIG slices. Let's see how quantization affects inference speed.
+
+. Run the benchmark:
++
+[source,bash]
+----
+guidellm benchmark \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/llama4-scout/llama-4-scout-17b/v1" \
+  --backend-kwargs '{"api_key": "'$TOKEN'"}' \
+  --profile concurrent \
+  --rate 10 \
+  --model meta-llama/Llama-4-Scout-17B-16E-W4A16 \
+  --data "prompt_tokens=64,output_tokens=128" \
+  --max-seconds 30
+----
+
+=== Verify
+
+✓ Benchmark completes +
+✓ Compare latency with the previous models
+
+== Exercise 5: Benchmark Llama 3.2 3B (small dense model)
+
+The smallest model in the lineup. Runs on a single 18 GB MIG slice.
+
+. Run the benchmark:
++
+[source,bash]
+----
+guidellm benchmark \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/llama32-3b/llama-3.2-3b-instruct/v1" \
+  --backend-kwargs '{"api_key": "'$TOKEN'"}' \
+  --profile concurrent \
+  --rate 10 \
+  --model meta-llama/Llama-3.2-3B-Instruct \
+  --data "prompt_tokens=64,output_tokens=128" \
+  --max-seconds 30
+----
+
+=== Verify
+
+✓ Benchmark completes +
+✓ This should be the lowest-latency model due to its small size
+
+== Exercise 6: Compare results
+
+Collect your benchmark results and fill in this comparison table:
+
+[cols="2,1,1,1,1,1",options="header"]
+|===
+|Model |GPU Allocation |Throughput (req/s) |p50 Latency |TTFT (p50) |Tokens/s
+
+|kimi-k2-5
+|8x H200
+|___
+|___
+|___
+|___
+
+|nemotron-cascade-2-30b
+|1x MIG-3g.71GB
+|___
+|___
+|___
+|___
+
+|llama-4-scout-17b
+|2x MIG-3g.71GB
+|___
+|___
+|___
+|___
+
+|llama-3.2-3b-instruct
+|1x MIG-1g.18GB
+|___
+|___
+|___
+|___
+|===
+
+Consider these questions:
+
+* Which model has the highest throughput?
+* Which model has the lowest latency?
+* How does GPU allocation correlate with performance?
+* Does quantization (Llama 4 Scout) help or hurt throughput?
+
+=== Compare with game performance
+
+Now compare your synthetic benchmarks with the actual WordSwarm game results:
+
+[cols="2,1,1,1,1",options="header"]
+|===
+|Model |Benchmark Tokens/s |Game Tokens/s |Game Score |Game Accuracy
+
+|kimi-k2-5
+|___
+|58.6
+|1,038
+|65%
+
+|nemotron-cascade-2-30b
+|___
+|128.6
+|264
+|59%
+
+|llama-4-scout-17b
+|___
+|34.9
+|153
+|76%
+
+|llama-3.2-3b-instruct
+|___
+|54.9
+|36
+|80%
+|===
+
+**Key insight:** Raw throughput doesn't directly predict game performance. nemotron-cascade has the highest game tokens/s (128.6) but scores lower than kimi-k2-5. The reasoning capability of the model matters more than raw speed for complex tasks.
+
+== Exercise 7: Try different benchmark profiles
+
+GuideLLM supports different load profiles. Try sweeping concurrency:
+
+. **Synchronous** (1 request at a time):
++
+[source,bash]
+----
+guidellm benchmark \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1" \
+  --backend-kwargs '{"api_key": "'$TOKEN'"}' \
+  --profile synchronous \
+  --model moonshotai/Kimi-K2.5 \
+  --data "prompt_tokens=64,output_tokens=128" \
+  --max-seconds 30
+----
+
+. **Concurrent with higher rate**:
++
+[source,bash]
+----
+guidellm benchmark \
+  --target "http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1" \
+  --backend-kwargs '{"api_key": "'$TOKEN'"}' \
+  --profile concurrent \
+  --rate 50 \
+  --model moonshotai/Kimi-K2.5 \
+  --data "prompt_tokens=64,output_tokens=128" \
+  --max-seconds 30
+----
+
+Compare how throughput and latency change under different concurrency levels.
+
+=== Verify
+
+✓ Synchronous benchmark shows baseline latency +
+✓ Higher concurrency increases throughput but may increase latency +
+✓ You can identify the saturation point for each model
+
+== Module summary
+
+**What you accomplished:**
+
+* Installed and configured GuideLLM
+* Benchmarked 4 models with different architectures and GPU allocations
+* Compared throughput, latency, and TTFT across models
+* Correlated synthetic benchmarks with real-world game performance
+* Explored different concurrency profiles
+
+**Key takeaways:**
+
+* Synthetic benchmarks measure raw inference speed -- useful for capacity planning
+* Real-world performance depends on model capability, not just speed
+* MoE models (kimi-k2-5, Nemotron) show different throughput profiles than dense models
+* Quantization (W4A16) reduces memory but may affect throughput
+* GPU allocation directly impacts maximum concurrency and throughput
+
+**Next:** Head to the Conclusion for a summary and next steps.

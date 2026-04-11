@@ -1,0 +1,215 @@
+= Module 1: Simple reasoning prompting
+:navtitle: Module 1: Reasoning Prompting
+:source-highlighter: rouge
+:toc: macro
+:toclevels: 1
+:icons: font
+
+Reasoning models like kimi-k2-5 and Qwen3 support extended thinking -- an internal chain-of-thought that runs before the model produces visible output. You can control this behavior with simple prompt tags: `/think` and `/no_think`.
+
+In this module, you'll experiment with these tags against live MaaS endpoints to see how reasoning affects response quality, latency, and token consumption.
+
+== Learning objectives
+
+By the end of this module, you'll be able to:
+
+* Explain the difference between `/think` and `/no_think` prompting
+* Send reasoning-enabled requests to a MaaS API endpoint
+* Observe how reasoning affects latency and token usage
+* Decide when to enable or disable reasoning for your use case
+
+== What is reasoning prompting?
+
+Some models support a "thinking" mode where they perform internal chain-of-thought reasoning before producing output. This is controlled via simple tags in your prompt:
+
+* **`/think`** -- Tells the model to reason step-by-step internally before answering. Produces higher quality responses but consumes more tokens and time.
+* **`/no_think`** -- Tells the model to skip extended thinking and respond directly. Faster and cheaper, but may miss nuance.
+
+The thinking tokens are typically returned in a separate field (`reasoning_content`) and are not counted as output tokens in most billing models.
+
+== Exercise 1: Set up your environment
+
+. Export your MaaS API token:
++
+[source,bash]
+----
+export TOKEN="your-bearer-token-here"
+----
+
+. Verify connectivity to the MaaS API:
++
+[source,bash]
+----
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/models | jq .
+----
++
+You should see model metadata confirming the endpoint is live.
+
+=== Verify
+
+✓ Token is exported +
+✓ API returns model metadata
+
+== Exercise 2: Compare /think vs /no_think
+
+Let's send the same question with and without reasoning enabled.
+
+. **Without reasoning** (`/no_think`) -- ask the model a word puzzle question:
++
+[source,bash]
+----
+curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "moonshotai/Kimi-K2.5",
+    "messages": [
+      {"role": "user", "content": "/no_think\nThe letters S, H, O, P are on adjacent hexagonal cells. The hint is S___ (4 letters). What word could this be? List all possibilities."}
+    ],
+    "max_tokens": 512
+  }' | jq -r '.choices[0].message.content'
+----
++
+Note the response time and quality.
+
+. **With reasoning** (`/think`) -- same question, reasoning enabled:
++
+[source,bash]
+----
+curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "moonshotai/Kimi-K2.5",
+    "messages": [
+      {"role": "user", "content": "/think\nThe letters S, H, O, P are on adjacent hexagonal cells. The hint is S___ (4 letters). What word could this be? List all possibilities."}
+    ],
+    "max_tokens": 4096
+  }' | jq '{content: .choices[0].message.content, reasoning: .choices[0].message.reasoning_content[0:500], usage: .usage}'
+----
++
+Observe: the `reasoning_content` field shows the model's internal chain-of-thought. The response should be more thorough.
+
+=== Verify
+
+✓ `/no_think` returns a quick, direct answer +
+✓ `/think` returns a more detailed answer with visible reasoning +
+✓ Token usage is higher with `/think`
+
+== Exercise 3: Measure the latency difference
+
+Let's time both approaches to quantify the reasoning overhead.
+
+. Time the `/no_think` response:
++
+[source,bash]
+----
+time curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "moonshotai/Kimi-K2.5",
+    "messages": [
+      {"role": "user", "content": "/no_think\nGiven the words SHOP, SONG, SING, SPIN — which one is most commonly used in everyday English? Answer in one word."}
+    ],
+    "max_tokens": 256
+  }' > /dev/null
+----
+
+. Time the `/think` response:
++
+[source,bash]
+----
+time curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "moonshotai/Kimi-K2.5",
+    "messages": [
+      {"role": "user", "content": "/think\nGiven the words SHOP, SONG, SING, SPIN — which one is most commonly used in everyday English? Answer in one word."}
+    ],
+    "max_tokens": 4096
+  }' > /dev/null
+----
+
+=== Verify
+
+✓ `/no_think` completes faster +
+✓ `/think` takes longer due to internal reasoning +
+✓ The quality difference may or may not matter for simple questions
+
+== Exercise 4: Try with a different model
+
+Not all models support `/think` and `/no_think`. Let's try with a non-reasoning model for comparison.
+
+. Send the same question to llama-3.2-3b (no reasoning support):
++
+[source,bash]
+----
+curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/llama32-3b/llama-3.2-3b-instruct/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-llama/Llama-3.2-3B-Instruct",
+    "messages": [
+      {"role": "user", "content": "The letters S, H, O, P are on adjacent hexagonal cells. The hint is S___ (4 letters). What word could this be? List all possibilities."}
+    ],
+    "max_tokens": 512
+  }' | jq -r '.choices[0].message.content'
+----
++
+Compare the response quality with kimi-k2-5's reasoning-enabled response.
+
+=== Verify
+
+✓ Non-reasoning model produces a direct answer +
+✓ Quality may differ from the reasoning model's output +
+✓ No `reasoning_content` field in the response
+
+== Exercise 5: Watch reasoning in action on WordSwarm
+
+. Open the WordSwarm dashboard in your browser:
++
+----
+https://red.ht/wordswarm
+----
++
+image::dashboard-overview.png[WordSwarm Dashboard,link=self,window=blank,width=700]
+
+. Select **kimi-k2-5** from the model dropdown (it's a reasoning model)
+
+. Click **START AGENT** and watch the agent play
++
+image::agent-running.png[Agent running with kimi-k2-5,link=self,window=blank,width=700]
+
+. Observe the stats panel:
+* **TTFT** (Time to First Token) -- higher for reasoning models due to thinking time
+* **Tokens In/Out** -- reasoning models consume more tokens per call
+* **Latency** -- includes both thinking and generation time
+
+. Try switching to a different model (e.g., **Llama 3.2 3B Instruct**) and compare behavior
+
+=== Verify
+
+✓ Observed TTFT difference between reasoning and non-reasoning models +
+✓ Noticed token consumption patterns +
+✓ Saw how reasoning affects game-playing ability
+
+== Module summary
+
+**What you accomplished:**
+
+* Sent `/think` and `/no_think` requests to a reasoning model
+* Measured latency and token overhead of reasoning
+* Compared reasoning vs. non-reasoning model responses
+* Observed reasoning in action on a live AI agent
+
+**Key takeaways:**
+
+* `/think` improves response quality at the cost of latency and tokens
+* `/no_think` is faster but may miss nuance on complex tasks
+* Not all models support reasoning -- it's an architecture feature
+* For real-time tasks like WordSwarm, reasoning overhead directly impacts gameplay speed
+
+**Next:** Module 2 will benchmark these models using GuideLLM to measure raw throughput and concurrency.

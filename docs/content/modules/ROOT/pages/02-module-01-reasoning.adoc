@@ -31,14 +31,14 @@ The thinking tokens are typically returned in a separate field (`reasoning_conte
 
 . Export your MaaS API token:
 +
-[source,bash]
+[source,bash,role=copy]
 ----
 export TOKEN="your-bearer-token-here"
 ----
 
 . Verify connectivity to the MaaS API:
 +
-[source,bash]
+[source,bash,role=copy]
 ----
 curl -s -H "Authorization: Bearer $TOKEN" \
   http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/models | jq .
@@ -57,7 +57,7 @@ Let's send the same question with and without reasoning enabled.
 
 . **Without reasoning** (`/no_think`) -- ask the model a word puzzle question:
 +
-[source,bash]
+[source,bash,role=copy]
 ----
 curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
   -H "Authorization: Bearer $TOKEN" \
@@ -75,7 +75,7 @@ Note the response time and quality.
 
 . **With reasoning** (`/think`) -- same question, reasoning enabled:
 +
-[source,bash]
+[source,bash,role=copy]
 ----
 curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
   -H "Authorization: Bearer $TOKEN" \
@@ -103,7 +103,7 @@ Let's time both approaches to quantify the reasoning overhead.
 
 . Time the `/no_think` response:
 +
-[source,bash]
+[source,bash,role=copy]
 ----
 time curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
   -H "Authorization: Bearer $TOKEN" \
@@ -119,7 +119,7 @@ time curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/
 
 . Time the `/think` response:
 +
-[source,bash]
+[source,bash,role=copy]
 ----
 time curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1/chat/completions \
   -H "Authorization: Bearer $TOKEN" \
@@ -145,7 +145,7 @@ Not all models support `/think` and `/no_think`. Let's try with a non-reasoning 
 
 . Send the same question to llama-3.2-3b (no reasoning support):
 +
-[source,bash]
+[source,bash,role=copy]
 ----
 curl -s http://maas.apps.ocp.cloud.rhai-tmm.dev/llama32-3b/llama-3.2-3b-instruct/v1/chat/completions \
   -H "Authorization: Bearer $TOKEN" \

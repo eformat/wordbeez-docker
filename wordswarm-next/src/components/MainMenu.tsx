@@ -48,6 +48,22 @@ export default function MainMenu({ onStartGame, onHowToPlay, onLeaderboard }: Ma
         }}
       />
 
+      {/* Red Hat fedora on the bee */}
+      <img
+        src="/images/redhat-hat.svg"
+        alt=""
+        style={{
+          position: 'absolute',
+          top: 60,
+          left: 415,
+          width: 90,
+          height: 100,
+          transform: 'rotate(-30deg)',
+          pointerEvents: 'none',
+          zIndex: 3,
+        }}
+      />
+
       {/* Wings animation */}
       <div
         style={{

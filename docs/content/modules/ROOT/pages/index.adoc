@@ -2,6 +2,11 @@
 
 Welcome to the WordSwarm AI workshop!
 
+The live demo is a WordSwarm game with an AI agent that can play it autonomously.
+
+https://red.ht/wordswarm[WordSwarm AI Demo^]
+
+
 == What you'll learn
 
 In this workshop, you will:

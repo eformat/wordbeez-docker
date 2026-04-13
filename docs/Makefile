@@ -1,13 +1,19 @@
-.PHONY: install build clean open
+PORT ?= 8887
+DOCS_DIR := $(shell pwd)
+SITE_DIR := $(DOCS_DIR)/www
+
+.PHONY: install build serve clean
 
 install:
-	npm i @antora/cli@3.1 @antora/site-generator@3.1
+	cd $(DOCS_DIR)/.. && npm install
 
-build:
-	npx antora --fetch site.yml
+build: install
+	rm -rf $(SITE_DIR)
+	cd $(DOCS_DIR) && npx antora site.yml --stacktrace
+
+serve: build
+	@echo "Serving at http://localhost:$(PORT)"
+	python3 -m http.server $(PORT) --directory $(SITE_DIR)
 
 clean:
-	rm -rf www .cache
-
-open: build
-	xdg-open www/index.html 2>/dev/null || open www/index.html
+	rm -rf $(SITE_DIR)

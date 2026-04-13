@@ -1,4 +1,5 @@
 * xref:index.adoc[Welcome]
+* xref:00-guide.adoc[Guide]
 
 .Workshop
 * xref:01-overview.adoc[Workshop Overview]

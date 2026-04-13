@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Guide from '@/components/Guide';
 
 interface AgentStats {
   llm_calls: number;
@@ -114,6 +115,7 @@ export default function Dashboard() {
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'guide' | 'agent'>('guide');
   const logIndexRef = useRef(0);
   const logEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -202,6 +204,7 @@ export default function Dashboard() {
         const data = await res.json();
         if (data.running && !agentRunning) {
           setAgentRunning(true);
+          setActiveTab('agent');
           setLogs([]);
           logIndexRef.current = 0;
           startPolling();
@@ -236,6 +239,7 @@ export default function Dashboard() {
 
     if (data.ok) {
       setAgentRunning(true);
+      setActiveTab('agent');
       startPolling();
     } else {
       setLogs((prev) => [...prev, `Error: ${data.message}`]);
@@ -327,226 +331,274 @@ export default function Dashboard() {
         flexDirection: 'column',
         minWidth: 420,
       }}>
-        {/* Agent header */}
+        {/* Tab header */}
         <div style={{
-          padding: '12px 20px',
           background: '#16213e',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           borderBottom: '1px solid #333',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              fontSize: 20,
-              fontWeight: 700,
-              color: '#e0e0e1',
-            }}>
-              AI Agent
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 20px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'stretch' }}>
+              {(['guide', 'agent'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  style={{
+                    padding: '12px 20px',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    border: 'none',
+                    borderBottom: activeTab === tab ? '3px solid #ffc220' : '3px solid transparent',
+                    background: 'none',
+                    color: activeTab === tab ? '#ffc220' : '#929497',
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.03em',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {tab === 'guide' ? 'Guide' : 'Agent'}
+                </button>
+              ))}
+              {activeTab === 'agent' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginLeft: 12,
+                }}>
+                  <div style={{
+                    fontSize: 11,
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    background: agentRunning ? '#166534' : '#333',
+                    color: agentRunning ? '#4ade80' : '#929497',
+                    fontWeight: 600,
+                  }}>
+                    {agentRunning ? 'RUNNING' : 'STOPPED'}
+                  </div>
+                </div>
+              )}
             </div>
+
+            <button
+              onClick={agentRunning ? handleStop : handleStart}
+              style={{
+                padding: '8px 24px',
+                fontSize: 14,
+                fontWeight: 700,
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                background: agentRunning ? '#dc2626' : '#ffc220',
+                color: agentRunning ? '#fff' : '#1a1a2e',
+                transition: 'all 0.15s',
+              }}
+            >
+              {agentRunning ? 'STOP AGENT' : 'START AGENT'}
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'guide' ? (
+          <>
+            {/* Guide content */}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <Guide />
+            </div>
+
+            {/* Footer */}
             <div style={{
+              padding: '8px 20px',
+              background: '#16213e',
               fontSize: 11,
-              padding: '2px 8px',
-              borderRadius: 4,
-              background: agentRunning ? '#166534' : '#333',
-              color: agentRunning ? '#4ade80' : '#929497',
-              fontWeight: 600,
+              color: '#555',
+              borderTop: '1px solid #333',
+              textAlign: 'center',
             }}>
-              {agentRunning ? 'RUNNING' : 'STOPPED'}
+              WordSwarm AI &mdash; LangChain + {models.find(m => m.id === selectedModel)?.name || 'LLM'} + React Next.js &mdash; Blind Mode
             </div>
-          </div>
-
-          <button
-            onClick={agentRunning ? handleStop : handleStart}
-            style={{
-              padding: '8px 24px',
-              fontSize: 14,
-              fontWeight: 700,
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer',
-              background: agentRunning ? '#dc2626' : '#ffc220',
-              color: agentRunning ? '#fff' : '#1a1a2e',
-              transition: 'all 0.15s',
-            }}
-          >
-            {agentRunning ? 'STOP AGENT' : 'START AGENT'}
-          </button>
-        </div>
-
-        {/* Model selector bar */}
-        <div style={{
-          padding: '6px 20px',
-          background: '#0f1629',
-          fontSize: 11,
-          color: '#666',
-          borderBottom: '1px solid #222',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          <span style={{ color: '#929497', fontWeight: 600 }}>MODEL:</span>
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={agentRunning || modelsLoading}
-            style={{
-              background: '#1a1a2e',
-              color: '#ffc220',
-              border: '1px solid #333',
-              borderRadius: 4,
-              padding: '3px 8px',
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: '"JetBrains Mono", "Fira Code", monospace',
-              cursor: agentRunning ? 'not-allowed' : 'pointer',
-              opacity: agentRunning ? 0.5 : 1,
-              minWidth: 180,
-            }}
-          >
-            {modelsLoading && <option value="">Loading models...</option>}
-            {models.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-          <span style={{ color: '#444' }}>|</span>
-          <span>Blind mode: path enumeration + dictionary</span>
-          <span style={{ color: '#444' }}>|</span>
-          <span>LangChain + LangGraph</span>
-        </div>
-
-        {/* Stats panel - big numbers */}
-        <div style={{
-          background: '#111827',
-          borderBottom: '2px solid #1e293b',
-          display: 'flex',
-          flexWrap: 'wrap',
-        }}>
-          {/* Top row - LLM metrics */}
-          <div style={{
-            display: 'flex',
-            width: '100%',
-            borderBottom: '1px solid #1e293b',
-          }}>
-            <StatCard
-              label="TTFT"
-              value={formatMs(stats.last_ttft_ms)}
-              color="#38bdf8"
-              subtext="time to first token"
-            />
-            <StatCard
-              label="Latency"
-              value={formatMs(stats.last_latency_ms)}
-              color="#818cf8"
-              subtext={stats.avg_latency_ms ? `avg ${formatMs(stats.avg_latency_ms)}` : 'last LLM call'}
-            />
-            <StatCard
-              label="LLM Calls"
-              value={stats.llm_calls.toString()}
-              color="#a78bfa"
-              subtext="total invocations"
-            />
-          </div>
-
-          {/* Middle row - token metrics */}
-          <div style={{
-            display: 'flex',
-            width: '100%',
-            borderBottom: '1px solid #1e293b',
-          }}>
-            <StatCard
-              label="Tokens In"
-              value={formatNumber(stats.total_input_tokens)}
-              color="#fb923c"
-              subtext={stats.last_input_tokens ? `last: ${formatNumber(stats.last_input_tokens)}` : 'prompt tokens'}
-            />
-            <StatCard
-              label="Tokens Out"
-              value={formatNumber(stats.total_output_tokens)}
-              color="#f472b6"
-              subtext={stats.last_output_tokens ? `last: ${formatNumber(stats.last_output_tokens)}` : 'completion tokens'}
-            />
-            <StatCard
-              label="Tokens/sec"
-              value={stats.total_latency_ms > 0 ? ((stats.total_output_tokens / stats.total_latency_ms) * 1000).toFixed(1) : '--'}
-              color="#c084fc"
-              subtext={stats.last_latency_ms > 0 ? `last: ${((stats.last_output_tokens / stats.last_latency_ms) * 1000).toFixed(1)} t/s` : 'output throughput'}
-            />
-          </div>
-
-          {/* Bottom row - game metrics */}
-          <div style={{
-            display: 'flex',
-            width: '100%',
-          }}>
-            <StatCard
-              label="Words Found"
-              value={stats.words_submitted.toString()}
-              color="#4ade80"
-              subtext="submitted to game"
-            />
-            <StatCard
-              label="Solver Runs"
-              value={stats.solver_calls.toString()}
-              color="#fbbf24"
-              subtext={stats.solver_candidates ? `${stats.solver_candidates} candidates` : 'path enumerations'}
-            />
-            <StatCard
-              label="Total Tokens"
-              value={formatNumber(totalTokens)}
-              color="#e0e0e1"
-              subtext={totalTokens ? `${formatNumber(stats.total_input_tokens)} in + ${formatNumber(stats.total_output_tokens)} out` : 'all tokens used'}
-            />
-          </div>
-        </div>
-
-        {/* Log output */}
-        <div style={{
-          flex: 1,
-          overflow: 'auto',
-          padding: '12px 16px',
-          background: '#0d1117',
-          fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-          fontSize: 12,
-          lineHeight: 1.6,
-        }}>
-          {logs.length === 0 && (
-            <div style={{ color: '#555', fontStyle: 'italic', padding: '20px 0' }}>
-              Press START AGENT to begin. The AI agent will observe the board,
-              enumerate valid paths through the honeycomb, match words against
-              the dictionary, and use the LLM to decide strategy for ambiguous cases.
-              Stats update live as the agent works.
+          </>
+        ) : (
+          <>
+            {/* Model selector bar */}
+            <div style={{
+              padding: '6px 20px',
+              background: '#0f1629',
+              fontSize: 11,
+              color: '#666',
+              borderBottom: '1px solid #222',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+              <span style={{ color: '#929497', fontWeight: 600 }}>MODEL:</span>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                disabled={agentRunning || modelsLoading}
+                style={{
+                  background: '#1a1a2e',
+                  color: '#ffc220',
+                  border: '1px solid #333',
+                  borderRadius: 4,
+                  padding: '3px 8px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                  cursor: agentRunning ? 'not-allowed' : 'pointer',
+                  opacity: agentRunning ? 0.5 : 1,
+                  minWidth: 180,
+                }}
+              >
+                {modelsLoading && <option value="">Loading models...</option>}
+                {models.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              <span style={{ color: '#444' }}>|</span>
+              <span>Blind mode: path enumeration + dictionary</span>
+              <span style={{ color: '#444' }}>|</span>
+              <span>LangChain + LangGraph</span>
             </div>
-          )}
-          {logs.map((line, i) => {
-            let color = '#c9d1d9';
-            if (line.includes('[stderr]')) color = '#f87171';
-            else if (line.includes('Starting') || line.includes('started')) color = '#4ade80';
-            else if (line.includes('ERROR') || line.includes('error')) color = '#f87171';
-            else if (line.includes('submitted') || line.includes('Submitted')) color = '#60a5fa';
-            else if (line.includes('Level') || line.includes('level')) color = '#ffc220';
-            else if (line.includes('Score') || line.includes('score')) color = '#c084fc';
 
-            return (
-              <div key={i} style={{ color, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                {line}
+            {/* Stats panel - big numbers */}
+            <div style={{
+              background: '#111827',
+              borderBottom: '2px solid #1e293b',
+              display: 'flex',
+              flexWrap: 'wrap',
+            }}>
+              {/* Top row - LLM metrics */}
+              <div style={{
+                display: 'flex',
+                width: '100%',
+                borderBottom: '1px solid #1e293b',
+              }}>
+                <StatCard
+                  label="TTFT"
+                  value={formatMs(stats.last_ttft_ms)}
+                  color="#38bdf8"
+                  subtext="time to first token"
+                />
+                <StatCard
+                  label="Latency"
+                  value={formatMs(stats.last_latency_ms)}
+                  color="#818cf8"
+                  subtext={stats.avg_latency_ms ? `avg ${formatMs(stats.avg_latency_ms)}` : 'last LLM call'}
+                />
+                <StatCard
+                  label="LLM Calls"
+                  value={stats.llm_calls.toString()}
+                  color="#a78bfa"
+                  subtext="total invocations"
+                />
               </div>
-            );
-          })}
-          <div ref={logEndRef} />
-        </div>
 
-        {/* Footer */}
-        <div style={{
-          padding: '8px 20px',
-          background: '#16213e',
-          fontSize: 11,
-          color: '#555',
-          borderTop: '1px solid #333',
-          textAlign: 'center',
-        }}>
-          WordSwarm AI &mdash; LangChain + {models.find(m => m.id === selectedModel)?.name || 'LLM'} + React Next.js &mdash; Blind Mode
-        </div>
+              {/* Middle row - token metrics */}
+              <div style={{
+                display: 'flex',
+                width: '100%',
+                borderBottom: '1px solid #1e293b',
+              }}>
+                <StatCard
+                  label="Tokens In"
+                  value={formatNumber(stats.total_input_tokens)}
+                  color="#fb923c"
+                  subtext={stats.last_input_tokens ? `last: ${formatNumber(stats.last_input_tokens)}` : 'prompt tokens'}
+                />
+                <StatCard
+                  label="Tokens Out"
+                  value={formatNumber(stats.total_output_tokens)}
+                  color="#f472b6"
+                  subtext={stats.last_output_tokens ? `last: ${formatNumber(stats.last_output_tokens)}` : 'completion tokens'}
+                />
+                <StatCard
+                  label="Tokens/sec"
+                  value={stats.total_latency_ms > 0 ? ((stats.total_output_tokens / stats.total_latency_ms) * 1000).toFixed(1) : '--'}
+                  color="#c084fc"
+                  subtext={stats.last_latency_ms > 0 ? `last: ${((stats.last_output_tokens / stats.last_latency_ms) * 1000).toFixed(1)} t/s` : 'output throughput'}
+                />
+              </div>
+
+              {/* Bottom row - game metrics */}
+              <div style={{
+                display: 'flex',
+                width: '100%',
+              }}>
+                <StatCard
+                  label="Words Found"
+                  value={stats.words_submitted.toString()}
+                  color="#4ade80"
+                  subtext="submitted to game"
+                />
+                <StatCard
+                  label="Solver Runs"
+                  value={stats.solver_calls.toString()}
+                  color="#fbbf24"
+                  subtext={stats.solver_candidates ? `${stats.solver_candidates} candidates` : 'path enumerations'}
+                />
+                <StatCard
+                  label="Total Tokens"
+                  value={formatNumber(totalTokens)}
+                  color="#e0e0e1"
+                  subtext={totalTokens ? `${formatNumber(stats.total_input_tokens)} in + ${formatNumber(stats.total_output_tokens)} out` : 'all tokens used'}
+                />
+              </div>
+            </div>
+
+            {/* Log output */}
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '12px 16px',
+              background: '#0d1117',
+              fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
+              fontSize: 12,
+              lineHeight: 1.6,
+            }}>
+              {logs.length === 0 && (
+                <div style={{ color: '#555', fontStyle: 'italic', padding: '20px 0' }}>
+                  Press START AGENT to begin. The AI agent will observe the board,
+                  enumerate valid paths through the honeycomb, match words against
+                  the dictionary, and use the LLM to decide strategy for ambiguous cases.
+                  Stats update live as the agent works.
+                </div>
+              )}
+              {logs.map((line, i) => {
+                let color = '#c9d1d9';
+                if (line.includes('[stderr]')) color = '#f87171';
+                else if (line.includes('Starting') || line.includes('started')) color = '#4ade80';
+                else if (line.includes('ERROR') || line.includes('error')) color = '#f87171';
+                else if (line.includes('submitted') || line.includes('Submitted')) color = '#60a5fa';
+                else if (line.includes('Level') || line.includes('level')) color = '#ffc220';
+                else if (line.includes('Score') || line.includes('score')) color = '#c084fc';
+
+                return (
+                  <div key={i} style={{ color, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                    {line}
+                  </div>
+                );
+              })}
+              <div ref={logEndRef} />
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '8px 20px',
+              background: '#16213e',
+              fontSize: 11,
+              color: '#555',
+              borderTop: '1px solid #333',
+              textAlign: 'center',
+            }}>
+              WordSwarm AI &mdash; LangChain + {models.find(m => m.id === selectedModel)?.name || 'LLM'} + React Next.js &mdash; Blind Mode
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

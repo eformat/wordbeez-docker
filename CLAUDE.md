@@ -94,8 +94,9 @@ It deliberately excludes `wordList` (the actual words and their cell positions).
 ### Core Libraries
 - `gameEngine.ts` — Puzzle generation, word validation, scoring. Uses Hamiltonian path from `randompath.ts` to lay words across cells.
 - `randompath.ts` — The 17-node adjacency graph (`ADJ` array) and `generatePath()` for Hamiltonian paths.
-- `gameStore.ts` — Server-side singleton. Module-level variables persist across requests in the same Node process.
-- `agentProcess.ts` — Spawns Python agent as child process via `child_process.spawn`. Manages log buffer, parses `[STATS]` lines.
+- `gameStore.ts` — Multi-session game state store. Uses `Map<sessionId, SessionData>` to isolate state per browser tab. Includes 30-min TTL cleanup.
+- `agentProcess.ts` — Multi-session agent manager. Uses `Map<sessionId, AgentSession>` to run one Python agent per session. Passes `SESSION_ID` env var to subprocesses.
+- `sessionId.ts` — Helper to extract `X-Session-Id` header from API requests (falls back to `"default"`).
 - `sounds.ts` — Lazy-loading Audio wrapper for game sound effects.
 
 ### Components
@@ -150,6 +151,7 @@ httpx-based HTTP client with Pydantic models:
 - `GameState` — full state (for non-blind mode)
 - `BlindGameState` — blind state
 - `get_state()`, `get_blind_state()`, `start_game()`, `submit_word()`
+- Sends `X-Session-Id` header on all requests (read from `SESSION_ID` env var via `config.py`)
 
 ## Dependencies
 
@@ -185,6 +187,6 @@ The game engine is in `gameEngine.ts`. Puzzle generation is in `buildPuzzle()`. 
 
 - The adjacency graph in `randompath.ts` (TypeScript) and `graph.py` (Python) MUST be identical. If one changes, update the other.
 - The game coordinate system is 0-indexed internally but the action queue uses 1-indexed cells (for the drag simulation).
-- `gameStore.ts` is a module-level singleton — it only works when the Next.js server runs in a single process (not in serverless/edge).
+- `gameStore.ts` and `agentProcess.ts` use in-memory Maps — they only work when the Next.js server runs in a single process (not in serverless/edge). Each browser tab gets its own session via `X-Session-Id` header.
 - The agent's `recursion_limit` is 200 steps. When exceeded, `main.py` auto-restarts with a fresh context.
 - kimi-k2-5 is a reasoning model — it consumes significant tokens on internal "thinking" before producing visible output. Set `max_tokens` to 8192+.

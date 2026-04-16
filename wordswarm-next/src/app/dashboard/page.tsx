@@ -108,6 +108,13 @@ interface ModelInfo {
 }
 
 export default function Dashboard() {
+  // Stable session ID for this dashboard tab — shared with the game iframe.
+  // Generated client-side only via useEffect to avoid SSR baking a shared UUID
+  // into the static HTML (which would make all visitors share one session).
+  const [sessionId, setSessionId] = useState('');
+  useEffect(() => {
+    setSessionId(crypto.randomUUID());
+  }, []);
   const [agentRunning, setAgentRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [gameState, setGameState] = useState<Record<string, unknown>>({});
@@ -120,11 +127,14 @@ export default function Dashboard() {
   const logEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  // Fetch available models on mount
+  // Fetch available models once session ID is ready
   useEffect(() => {
+    if (!sessionId) return;
     async function fetchModels() {
       try {
-        const res = await fetch('/api/models');
+        const res = await fetch('/api/models', {
+          headers: { 'X-Session-Id': sessionId },
+        });
         const data = await res.json();
         if (data.models) {
           setModels(data.models);
@@ -136,40 +146,46 @@ export default function Dashboard() {
       setModelsLoading(false);
     }
     fetchModels();
-  }, []);
+  }, [sessionId]);
 
   // Sync selected model to server (for 2P auto-start)
   useEffect(() => {
-    if (!selectedModel) return;
+    if (!sessionId || !selectedModel) return;
     const model = models.find(m => m.id === selectedModel);
     if (!model) return;
     fetch('/api/models', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
       body: JSON.stringify({ id: model.id, url: model.url }),
     }).catch(() => {});
-  }, [selectedModel, models]);
+  }, [sessionId, selectedModel, models]);
 
   // Poll for game state
   useEffect(() => {
+    if (!sessionId) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch('/api/game');
+        const res = await fetch('/api/game', {
+          headers: { 'X-Session-Id': sessionId },
+        });
         const data = await res.json();
         setGameState(data);
       } catch {}
     }, 500);
     return () => clearInterval(interval);
-  }, []);
+  }, [sessionId]);
 
   // Poll for agent logs when running
   const startPolling = useCallback(() => {
+    if (!sessionId) return;
     if (pollRef.current) clearInterval(pollRef.current);
     logIndexRef.current = 0;
 
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/agent?since=${logIndexRef.current}`);
+        const res = await fetch(`/api/agent?since=${logIndexRef.current}`, {
+          headers: { 'X-Session-Id': sessionId },
+        });
         const data = await res.json();
         if (data.logs && data.logs.length > 0) {
           setLogs((prev) => [...prev, ...data.logs]);
@@ -183,7 +199,7 @@ export default function Dashboard() {
         }
       } catch {}
     }, 300);
-  }, []);
+  }, [sessionId]);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -198,9 +214,12 @@ export default function Dashboard() {
 
   // Detect when agent is started externally (e.g. 2P auto-start)
   useEffect(() => {
+    if (!sessionId) return;
     const detectInterval = setInterval(async () => {
       try {
-        const res = await fetch('/api/agent');
+        const res = await fetch('/api/agent', {
+          headers: { 'X-Session-Id': sessionId },
+        });
         const data = await res.json();
         if (data.running && !agentRunning) {
           setAgentRunning(true);
@@ -212,7 +231,7 @@ export default function Dashboard() {
       } catch {}
     }, 1000);
     return () => clearInterval(detectInterval);
-  }, [agentRunning, startPolling]);
+  }, [sessionId, agentRunning, startPolling]);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -228,7 +247,7 @@ export default function Dashboard() {
 
     const res = await fetch('/api/agent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
       body: JSON.stringify({
         action: 'start',
         modelUrl: model?.url,
@@ -249,7 +268,7 @@ export default function Dashboard() {
   const handleStop = async () => {
     await fetch('/api/agent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
       body: JSON.stringify({ action: 'stop' }),
     });
     setAgentRunning(false);
@@ -310,17 +329,19 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Game iframe */}
+        {/* Game iframe — only render once sessionId is ready */}
         <div style={{ flex: 1, position: 'relative' }}>
-          <iframe
-            src="/"
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              background: '#000',
-            }}
-          />
+          {sessionId && (
+            <iframe
+              src={`/?sessionId=${sessionId}`}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                background: '#000',
+              }}
+            />
+          )}
         </div>
       </div>
 

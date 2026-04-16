@@ -1,5 +1,6 @@
 /*
- * Shared game state singleton.
+ * Multi-session game state store.
+ * Each browser tab gets its own session via X-Session-Id header.
  * GamePage.tsx syncs React state here; API routes read/write from here.
  * This runs server-side in the Node.js process.
  */
@@ -39,9 +40,6 @@ const defaultState: SharedGameState = {
   player1Score: 0,
 };
 
-// Module-level singleton — persists across requests in the same Node process
-let _state: SharedGameState = { ...defaultState };
-
 // Pending action queue: API writes here, client polls and executes
 export interface GameAction {
   id: string;
@@ -50,46 +48,97 @@ export interface GameAction {
   mode?: '1player' | '2players';
 }
 
-let _pendingActions: GameAction[] = [];
-let _actionCounter = 0;
-
-export function getGameState(): SharedGameState {
-  return { ..._state };
-}
-
-export function updateGameState(partial: Partial<SharedGameState>): void {
-  _state = { ..._state, ...partial };
-}
-
-export function resetGameState(): void {
-  _state = { ...defaultState };
-}
-
-export function pushAction(action: Omit<GameAction, 'id'>): string {
-  _actionCounter++;
-  const id = `action-${_actionCounter}`;
-  _pendingActions.push({ ...action, id });
-  return id;
-}
-
-export function popActions(): GameAction[] {
-  const actions = _pendingActions;
-  _pendingActions = [];
-  return actions;
-}
-
 // Selected model — set by dashboard, read by 2P auto-start
 interface SelectedModel {
   id: string;
   url: string;
 }
 
-let _selectedModel: SelectedModel | null = null;
-
-export function setSelectedModel(model: SelectedModel): void {
-  _selectedModel = model;
+// Per-session data
+interface SessionData {
+  state: SharedGameState;
+  pendingActions: GameAction[];
+  actionCounter: number;
+  selectedModel: SelectedModel | null;
+  lastAccess: number; // Date.now()
 }
 
-export function getSelectedModel(): SelectedModel | null {
-  return _selectedModel;
+// Session map — keyed by session ID
+const _sessions = new Map<string, SessionData>();
+
+// Session TTL: 30 minutes
+const SESSION_TTL_MS = 30 * 60 * 1000;
+// Cleanup interval: 5 minutes
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
+function getOrCreateSession(sessionId: string): SessionData {
+  let session = _sessions.get(sessionId);
+  if (!session) {
+    session = {
+      state: { ...defaultState },
+      pendingActions: [],
+      actionCounter: 0,
+      selectedModel: null,
+      lastAccess: Date.now(),
+    };
+    _sessions.set(sessionId, session);
+  } else {
+    session.lastAccess = Date.now();
+  }
+  return session;
 }
+
+export function getGameState(sessionId: string): SharedGameState {
+  const session = getOrCreateSession(sessionId);
+  return { ...session.state };
+}
+
+export function updateGameState(sessionId: string, partial: Partial<SharedGameState>): void {
+  const session = getOrCreateSession(sessionId);
+  session.state = { ...session.state, ...partial };
+}
+
+export function resetGameState(sessionId: string): void {
+  const session = getOrCreateSession(sessionId);
+  session.state = { ...defaultState };
+}
+
+export function pushAction(sessionId: string, action: Omit<GameAction, 'id'>): string {
+  const session = getOrCreateSession(sessionId);
+  session.actionCounter++;
+  const id = `action-${session.actionCounter}`;
+  session.pendingActions.push({ ...action, id });
+  return id;
+}
+
+export function popActions(sessionId: string): GameAction[] {
+  const session = getOrCreateSession(sessionId);
+  const actions = session.pendingActions;
+  session.pendingActions = [];
+  return actions;
+}
+
+export function setSelectedModel(sessionId: string, model: SelectedModel): void {
+  const session = getOrCreateSession(sessionId);
+  session.selectedModel = model;
+}
+
+export function getSelectedModel(sessionId: string): SelectedModel | null {
+  const session = getOrCreateSession(sessionId);
+  return session.selectedModel;
+}
+
+// Periodic cleanup of stale sessions
+function cleanupSessions() {
+  const now = Date.now();
+  for (const [id, session] of _sessions) {
+    if (now - session.lastAccess > SESSION_TTL_MS) {
+      _sessions.delete(id);
+    }
+  }
+}
+
+// Start cleanup timer (runs in the Node.js process)
+const _cleanupTimer = setInterval(cleanupSessions, CLEANUP_INTERVAL_MS);
+// Don't prevent Node from exiting
+if (_cleanupTimer.unref) _cleanupTimer.unref();

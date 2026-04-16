@@ -1,6 +1,6 @@
 /*
- * Manages the Python WordSwarm agent as a child process.
- * Singleton — one agent process at a time.
+ * Manages Python WordSwarm agent processes — one per session.
+ * Each browser tab (session) gets its own agent subprocess.
  */
 
 import { spawn, ChildProcess, execSync } from 'child_process';
@@ -55,89 +55,111 @@ const EMPTY_STATS: AgentStats = {
   avg_latency_ms: 0,
 };
 
-let _process: ChildProcess | null = null;
-let _logs: string[] = [];
-let _startedAt: string | null = null;
-let _logCounter = 0;
-let _stats: AgentStats = { ...EMPTY_STATS };
-let _modelName: string = '';
-let _scoreSaved = false;
-
 const MAX_LOGS = 500;
 
-function addLog(line: string) {
+// Per-session agent data
+interface AgentSession {
+  process: ChildProcess | null;
+  logs: string[];
+  logCounter: number;
+  startedAt: string | null;
+  stats: AgentStats;
+  modelName: string;
+  scoreSaved: boolean;
+}
+
+// Session map — keyed by session ID
+const _sessions = new Map<string, AgentSession>();
+
+function getOrCreateSession(sessionId: string): AgentSession {
+  let session = _sessions.get(sessionId);
+  if (!session) {
+    session = {
+      process: null,
+      logs: [],
+      logCounter: 0,
+      startedAt: null,
+      stats: { ...EMPTY_STATS },
+      modelName: '',
+      scoreSaved: false,
+    };
+    _sessions.set(sessionId, session);
+  }
+  return session;
+}
+
+function addLog(session: AgentSession, line: string) {
   // Parse [STATS] lines — update stats but don't add to visible logs
   if (line.startsWith('[STATS] ')) {
     try {
       const payload = JSON.parse(line.slice(8));
-      _stats = { ...EMPTY_STATS, ...payload };
+      session.stats = { ...EMPTY_STATS, ...payload };
     } catch {}
     return;
   }
 
-  _logCounter++;
+  session.logCounter++;
   const timestamp = new Date().toISOString().slice(11, 19);
-  _logs.push(`[${timestamp}] ${line}`);
-  if (_logs.length > MAX_LOGS) {
-    _logs = _logs.slice(-MAX_LOGS);
+  session.logs.push(`[${timestamp}] ${line}`);
+  if (session.logs.length > MAX_LOGS) {
+    session.logs = session.logs.slice(-MAX_LOGS);
   }
 }
 
-export function getAgentState(): AgentState {
+export function getAgentState(sessionId: string): AgentState {
+  const session = getOrCreateSession(sessionId);
   return {
-    running: _process !== null && _process.exitCode === null,
-    logs: [..._logs],
-    startedAt: _startedAt,
-    pid: _process?.pid ?? null,
-    stats: { ..._stats },
+    running: session.process !== null && session.process.exitCode === null,
+    logs: [...session.logs],
+    startedAt: session.startedAt,
+    pid: session.process?.pid ?? null,
+    stats: { ...session.stats },
   };
 }
 
-export function getLogsSince(fromIndex: number): { logs: string[]; nextIndex: number; stats: AgentStats; running: boolean } {
-  // _logCounter is the total logs ever added (monotonically increasing).
-  // _logs is a rolling buffer of the last MAX_LOGS entries.
-  // Convert the absolute cursor (fromIndex) to an array offset.
-  const oldestAbsolute = _logCounter - _logs.length; // absolute index of _logs[0]
+export function getLogsSince(sessionId: string, fromIndex: number): { logs: string[]; nextIndex: number; stats: AgentStats; running: boolean } {
+  const session = getOrCreateSession(sessionId);
+  const oldestAbsolute = session.logCounter - session.logs.length;
   let arrayOffset: number;
   if (fromIndex <= oldestAbsolute) {
-    // Client is behind the buffer — send everything we have
     arrayOffset = 0;
   } else {
     arrayOffset = fromIndex - oldestAbsolute;
   }
-  const newLogs = _logs.slice(arrayOffset);
+  const newLogs = session.logs.slice(arrayOffset);
   return {
     logs: newLogs,
-    nextIndex: _logCounter, // absolute cursor for next poll
-    stats: { ..._stats },
-    running: _process !== null && _process.exitCode === null,
+    nextIndex: session.logCounter,
+    stats: { ...session.stats },
+    running: session.process !== null && session.process.exitCode === null,
   };
 }
 
-export function startAgent(env: Record<string, string>): { ok: boolean; message: string } {
-  if (_process !== null && _process.exitCode === null) {
+export function startAgent(sessionId: string, env: Record<string, string>): { ok: boolean; message: string } {
+  const session = getOrCreateSession(sessionId);
+
+  if (session.process !== null && session.process.exitCode === null) {
     // Verify the process is actually alive
     try {
-      process.kill(_process.pid!, 0); // signal 0 = check if alive
+      process.kill(session.process.pid!, 0);
       return { ok: false, message: 'Agent is already running' };
     } catch {
-      // Process is dead but wasn't cleaned up — reset
-      _process = null;
+      session.process = null;
     }
   }
   // Clean up stale reference
-  if (_process !== null && _process.exitCode !== null) {
-    _process = null;
+  if (session.process !== null && session.process.exitCode !== null) {
+    session.process = null;
   }
 
-  _logs = [];
-  _logCounter = 0;
-  _stats = { ...EMPTY_STATS };
-  _startedAt = new Date().toISOString();
-  _modelName = env.MODEL_NAME || '';
-  _scoreSaved = false;
+  session.logs = [];
+  session.logCounter = 0;
+  session.stats = { ...EMPTY_STATS };
+  session.startedAt = new Date().toISOString();
+  session.modelName = env.MODEL_NAME || '';
+  session.scoreSaved = false;
 
-  addLog('Starting WordSwarm agent...');
+  addLog(session, 'Starting WordSwarm agent...');
 
   // Detect environment: local dev (.venv) vs container (pip-installed wordswarm-agent)
   const agentDir = path.resolve(process.cwd(), '..', 'wordswarm-agent');
@@ -157,8 +179,8 @@ export function startAgent(env: Record<string, string>): { ok: boolean; message:
   }
 
   if (!hasVenv && !systemPython) {
-    addLog('Python agent not available in this container.');
-    addLog('The agent runs as a sidecar container — check agent container logs.');
+    addLog(session, 'Python agent not available in this container.');
+    addLog(session, 'The agent runs as a sidecar container — check agent container logs.');
     return { ok: false, message: 'Agent runs as a sidecar container. Use "podman logs" or "oc logs" to view agent output.' };
   }
 
@@ -167,109 +189,124 @@ export function startAgent(env: Record<string, string>): { ok: boolean; message:
   let spawnCwd: string;
 
   if (hasVenv) {
-    // Local dev: use venv Python
     spawnCmd = venvPython;
     spawnArgs = ['-m', 'wordswarm_agent.main'];
     spawnCwd = agentDir;
   } else {
-    // Container with agent pip-installed
     spawnCmd = systemPython;
     spawnArgs = ['-m', 'wordswarm_agent.main'];
     spawnCwd = process.cwd();
   }
 
-  _process = spawn(spawnCmd, spawnArgs, {
+  session.process = spawn(spawnCmd, spawnArgs, {
     cwd: spawnCwd,
     env: {
       ...process.env,
       ...env,
+      SESSION_ID: sessionId,
       PYTHONUNBUFFERED: '1',
     },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
-  addLog(`Agent process started (PID: ${_process.pid})`);
+  addLog(session, `Agent process started (PID: ${session.process.pid})`);
 
-  _process.stdout?.on('data', (data: Buffer) => {
+  session.process.stdout?.on('data', (data: Buffer) => {
     const lines = data.toString().split('\n').filter((l: string) => l.trim());
     for (const line of lines) {
-      addLog(line);
+      addLog(session, line);
     }
   });
 
-  _process.stderr?.on('data', (data: Buffer) => {
+  session.process.stderr?.on('data', (data: Buffer) => {
     const lines = data.toString().split('\n').filter((l: string) => l.trim());
     for (const line of lines) {
-      // Filter out noisy Python warnings
       if (line.includes('UserWarning') || line.includes('deprecation')) continue;
-      addLog(`[stderr] ${line}`);
+      addLog(session, `[stderr] ${line}`);
     }
   });
 
-  _process.on('close', (code: number | null) => {
-    addLog(`Agent process exited (code: ${code})`);
+  session.process.on('close', (code: number | null) => {
+    addLog(session, `Agent process exited (code: ${code})`);
 
     // Auto-submit agent score to leaderboard (once per run)
     try {
-      const gameState = getGameState();
-      if (gameState.score > 0 && !_scoreSaved) {
-        _scoreSaved = true;
-        const totalTokens = _stats.total_input_tokens + _stats.total_output_tokens;
-        const tokensPerSec = _stats.total_latency_ms > 0
-          ? ((_stats.total_output_tokens / _stats.total_latency_ms) * 1000)
+      const gameState = getGameState(sessionId);
+      if (gameState.score > 0 && !session.scoreSaved) {
+        session.scoreSaved = true;
+        const totalTokens = session.stats.total_input_tokens + session.stats.total_output_tokens;
+        const tokensPerSec = session.stats.total_latency_ms > 0
+          ? ((session.stats.total_output_tokens / session.stats.total_latency_ms) * 1000)
           : 0;
         const entry = addEntry({
-          name: _modelName || 'AI Agent',
+          name: session.modelName || 'AI Agent',
           score: gameState.score,
           level: gameState.level,
           date: new Date().toISOString(),
           type: 'agent',
-          modelName: _modelName || 'unknown',
+          modelName: session.modelName || 'unknown',
           totalTokens,
-          inputTokens: _stats.total_input_tokens,
-          outputTokens: _stats.total_output_tokens,
-          llmCalls: _stats.llm_calls,
-          avgLatencyMs: _stats.avg_latency_ms,
-          lastTtftMs: _stats.last_ttft_ms,
+          inputTokens: session.stats.total_input_tokens,
+          outputTokens: session.stats.total_output_tokens,
+          llmCalls: session.stats.llm_calls,
+          avgLatencyMs: session.stats.avg_latency_ms,
+          lastTtftMs: session.stats.last_ttft_ms,
           tokensPerSec: Math.round(tokensPerSec * 10) / 10,
-          wordsSubmitted: _stats.words_submitted,
-          wordsCorrect: _stats.words_correct,
-          solverCalls: _stats.solver_calls,
-          solverCandidates: _stats.solver_candidates,
-          totalLatencyMs: _stats.total_latency_ms,
+          wordsSubmitted: session.stats.words_submitted,
+          wordsCorrect: session.stats.words_correct,
+          solverCalls: session.stats.solver_calls,
+          solverCandidates: session.stats.solver_candidates,
+          totalLatencyMs: session.stats.total_latency_ms,
         });
-        addLog(`Leaderboard: saved agent score ${gameState.score} (level ${gameState.level}) as "${entry.name}"`);
+        addLog(session, `Leaderboard: saved agent score ${gameState.score} (level ${gameState.level}) as "${entry.name}"`);
       }
     } catch (e) {
-      addLog(`Leaderboard: failed to save agent score: ${e}`);
+      addLog(session, `Leaderboard: failed to save agent score: ${e}`);
     }
 
-    _process = null;
+    session.process = null;
   });
 
-  _process.on('error', (err: Error) => {
-    addLog(`Agent process error: ${err.message}`);
-    _process = null;
+  session.process.on('error', (err: Error) => {
+    addLog(session, `Agent process error: ${err.message}`);
+    session.process = null;
   });
 
-  return { ok: true, message: `Agent started (PID: ${_process.pid})` };
+  return { ok: true, message: `Agent started (PID: ${session.process.pid})` };
 }
 
-export function stopAgent(): { ok: boolean; message: string } {
-  if (!_process || _process.exitCode !== null) {
+export function stopAgent(sessionId: string): { ok: boolean; message: string } {
+  const session = getOrCreateSession(sessionId);
+
+  if (!session.process || session.process.exitCode !== null) {
     return { ok: false, message: 'Agent is not running' };
   }
 
-  addLog('Stopping agent...');
-  _process.kill('SIGTERM');
+  addLog(session, 'Stopping agent...');
+  session.process.kill('SIGTERM');
 
   // Force kill after 3 seconds
+  const proc = session.process;
   setTimeout(() => {
-    if (_process && _process.exitCode === null) {
-      _process.kill('SIGKILL');
-      addLog('Agent force-killed');
+    if (proc && proc.exitCode === null) {
+      proc.kill('SIGKILL');
+      addLog(session, 'Agent force-killed');
     }
   }, 3000);
 
   return { ok: true, message: 'Agent stop signal sent' };
+}
+
+// Clean up a specific session's agent (called during session TTL cleanup)
+export function cleanupAgentSession(sessionId: string): void {
+  const session = _sessions.get(sessionId);
+  if (session?.process && session.process.exitCode === null) {
+    session.process.kill('SIGTERM');
+    setTimeout(() => {
+      if (session.process && session.process.exitCode === null) {
+        session.process.kill('SIGKILL');
+      }
+    }, 3000);
+  }
+  _sessions.delete(sessionId);
 }

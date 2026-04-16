@@ -6,7 +6,7 @@ Communicates with the Next.js game server via REST endpoints.
 import httpx
 from pydantic import BaseModel
 
-from .config import GAME_URL
+from .config import GAME_URL, SESSION_ID
 
 
 class GameState(BaseModel):
@@ -41,9 +41,12 @@ class BlindGameState(BaseModel):
 class GameClient:
     """Synchronous HTTP client for the WordSwarm game API."""
 
-    def __init__(self, base_url: str = GAME_URL):
+    def __init__(self, base_url: str = GAME_URL, session_id: str = SESSION_ID):
         self.base_url = base_url.rstrip("/")
-        self.client = httpx.Client(timeout=10.0)
+        self.client = httpx.Client(
+            timeout=10.0,
+            headers={"X-Session-Id": session_id},
+        )
 
     def get_state(self) -> GameState:
         """Get current game state (full — used for non-blind mode)."""

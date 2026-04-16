@@ -15,11 +15,11 @@ import {
 import { sounds } from '@/lib/sounds';
 
 // Sync game state to the server-side store via API
-async function syncState(state: Record<string, unknown>) {
+async function syncState(state: Record<string, unknown>, sessionId: string) {
   try {
     await fetch('/api/game/sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
       body: JSON.stringify(state),
     });
   } catch {}
@@ -33,9 +33,25 @@ interface GamePageProps {
   onMusicToggle: (on: boolean) => void;
   onMainMenu: () => void;
   onScoreSubmitted?: (entryId: string) => void;
+  sessionId?: string;
 }
 
-export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundToggle, onMusicToggle, onMainMenu, onScoreSubmitted }: GamePageProps) {
+export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundToggle, onMusicToggle, onMainMenu, onScoreSubmitted, sessionId: sessionIdProp }: GamePageProps) {
+  // Generate a stable session ID for this tab.
+  // Read from prop first, then fall back to URL query param (for iframe embedding),
+  // then generate a new UUID for standalone use.
+  const sessionIdRef = useRef<string | null>(null);
+  if (sessionIdRef.current === null) {
+    if (sessionIdProp) {
+      sessionIdRef.current = sessionIdProp;
+    } else if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      sessionIdRef.current = params.get('sessionId') || crypto.randomUUID();
+    } else {
+      sessionIdRef.current = crypto.randomUUID();
+    }
+  }
+  const sessionId = sessionIdRef.current;
   const [phase, setPhase] = useState<'intro' | 'go' | 'playing' | 'levelComplete' | 'gameOver' | 'paused' | 'p1done'>('intro');
   const [showSettings, setShowSettings] = useState(false);
   const [showNameEntry, setShowNameEntry] = useState(false);
@@ -83,8 +99,8 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
       phase, level, score, honeyLevel, timeLeft,
       letters, wordList, revealedWords, honeycombVisible,
       mode, playerId, player1Score,
-    });
-  }, [phase, level, score, honeyLevel, timeLeft, letters, wordList, revealedWords, honeycombVisible, mode, playerId, player1Score]);
+    }, sessionId);
+  }, [phase, level, score, honeyLevel, timeLeft, letters, wordList, revealedWords, honeycombVisible, mode, playerId, player1Score, sessionId]);
 
   // Load word list
   useEffect(() => {
@@ -400,7 +416,7 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
       setAgentStatus('starting');
       fetch('/api/agent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
         body: JSON.stringify({ action: 'start' }),
       })
         .then((res) => res.json())
@@ -424,11 +440,11 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
       setAgentStatus('idle');
       fetch('/api/agent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
         body: JSON.stringify({ action: 'stop' }),
       }).catch(() => {});
     }
-  }, [mode, playerId, phase]);
+  }, [mode, playerId, phase, sessionId]);
 
   // Reset agent flag when switching back to Player 1
   useEffect(() => {
@@ -450,7 +466,7 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
       try {
         const res = await fetch('/api/game', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
           body: JSON.stringify({ action: 'get_pending' }),
         });
         const data = await res.json();
@@ -479,7 +495,7 @@ export default function GamePage({ mode, soundEffectsOn, themeMusicOn, onSoundTo
       } catch {}
     }, 200);
     return () => clearInterval(pollInterval);
-  }, [startGame, handleMouseDown, handleMouseOver, handleMouseUp]);
+  }, [startGame, handleMouseDown, handleMouseOver, handleMouseUp, sessionId]);
 
   return (
     <div

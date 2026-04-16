@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import MainMenu from '@/components/MainMenu';
 import GamePage from '@/components/GamePage';
 import HowToPlay from '@/components/HowToPlay';
@@ -9,7 +10,9 @@ import { sounds } from '@/lib/sounds';
 
 type Screen = 'main' | 'game' | 'howto' | 'leaderboard';
 
-export default function Home() {
+function HomeInner() {
+  const searchParams = useSearchParams();
+  const sessionIdFromParam = searchParams.get('sessionId') || undefined;
   const [screen, setScreen] = useState<Screen>('main');
   const [gameMode, setGameMode] = useState<'1player' | '2players'>('1player');
   const [soundEffectsOn, setSoundEffectsOn] = useState(true);
@@ -114,6 +117,7 @@ export default function Home() {
             setHighlightEntryId(entryId);
             setScreen('leaderboard');
           }}
+          sessionId={sessionIdFromParam}
         />
       )}
 
@@ -138,5 +142,13 @@ export default function Home() {
       )}
     </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeInner />
+    </Suspense>
   );
 }

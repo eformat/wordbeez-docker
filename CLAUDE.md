@@ -34,12 +34,22 @@ The agent is spawned as a subprocess by the Next.js server when you click START 
 
 ## Key Architectural Patterns
 
+### Multi-Tenant Sessions
+
+The game is multi-tenant — each browser tab gets its own isolated session (game state, action queue, agent process). Session isolation is implemented via:
+
+- **Session ID**: Each dashboard tab generates a `crypto.randomUUID()` client-side on mount. This is passed to the game iframe via `?sessionId=` query param and to all API calls via `X-Session-Id` header.
+- **Server stores**: `gameStore.ts` and `agentProcess.ts` use `Map<sessionId, SessionData>` instead of singletons. All exported functions take `sessionId` as their first parameter.
+- **Python agent**: Receives `SESSION_ID` env var from `agentProcess.ts` on spawn, sends `X-Session-Id` header on all API calls via `httpx.Client` default headers.
+- **Fallback**: If no `X-Session-Id` header is present, API routes fall back to session `"default"`.
+- **Cleanup**: Stale sessions (idle > 30 min) are automatically cleaned up, including killing any running agent processes.
+
 ### Action Queue (Client <-> Agent Bridge)
 
-The React game runs client-side. The Python agent runs server-side. They communicate through a server-side action queue:
+The React game runs client-side. The Python agent runs server-side. They communicate through a per-session server-side action queue:
 
-- **Client -> Server**: `POST /api/game/sync` pushes React state to `gameStore.ts` singleton
-- **Agent -> Server**: `POST /api/game` pushes actions (`start`, `submit_word`) to queue
+- **Client -> Server**: `POST /api/game/sync` pushes React state to `gameStore.ts` (keyed by session ID)
+- **Agent -> Server**: `POST /api/game` pushes actions (`start`, `submit_word`) to the session's queue
 - **Server -> Client**: Client polls `POST /api/game {get_pending}` every 200ms, executes actions as simulated drag sequences
 
 This avoids WebSockets or direct DOM manipulation — the agent just queues cell sequences and the game client replays them.

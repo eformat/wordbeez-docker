@@ -1,12 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getGameState } from '@/lib/gameStore';
+import { getSessionId } from '@/lib/sessionId';
 
 export const dynamic = 'force-dynamic';
 
 // GET /api/game/blind — return only what a human player can see
 // No wordList, no cell positions — just letters, hints, and game status
-export async function GET() {
-  const state = getGameState();
+export async function GET(request: NextRequest) {
+  const sessionId = getSessionId(request);
+  const state = getGameState(sessionId);
 
   // Build hints: first letter + word length for each word (what the word list UI shows)
   const hints = state.wordList.map((w, i) => {

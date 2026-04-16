@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGameState, pushAction, popActions } from '@/lib/gameStore';
+import { getSessionId } from '@/lib/sessionId';
 
 // GET /api/game — return current game state
-export async function GET() {
-  const state = getGameState();
+export async function GET(request: NextRequest) {
+  const sessionId = getSessionId(request);
+  const state = getGameState(sessionId);
   return NextResponse.json(state);
 }
 
 // POST /api/game — submit an action or poll pending actions
 export async function POST(request: NextRequest) {
+  const sessionId = getSessionId(request);
   const body = await request.json();
   const { action } = body;
 
   if (action === 'get_pending') {
     // Client polls this to get actions queued by the agent
-    const actions = popActions();
+    const actions = popActions(sessionId);
     return NextResponse.json({ actions });
   }
 
   if (action === 'start') {
     const mode = body.mode || '1player';
-    const id = pushAction({ action: 'start', mode });
+    const id = pushAction(sessionId, { action: 'start', mode });
     return NextResponse.json({ ok: true, actionId: id, message: `Queued start game (${mode})` });
   }
 
@@ -29,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (!cells || !Array.isArray(cells)) {
       return NextResponse.json({ error: 'cells array required' }, { status: 400 });
     }
-    const id = pushAction({ action: 'submit_word', cells });
+    const id = pushAction(sessionId, { action: 'submit_word', cells });
     return NextResponse.json({ ok: true, actionId: id, message: `Queued word submission: cells ${cells}` });
   }
 

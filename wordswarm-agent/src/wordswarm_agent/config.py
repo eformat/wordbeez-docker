@@ -5,6 +5,9 @@ import os
 # Game server
 GAME_URL = os.environ.get("GAME_URL", "http://localhost:3000")
 
+# Session ID — ties this agent to a specific browser tab's game session
+SESSION_ID = os.environ.get("SESSION_ID", "default")
+
 # LLM endpoint (OpenAI-compatible, e.g. vLLM serving kimi-k2-5)
 MODEL_URL = os.environ.get(
     "MODEL_URL",

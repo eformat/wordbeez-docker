@@ -152,7 +152,7 @@ class StatsCallbackHandler(BaseCallbackHandler):
                 reasoning_tokens = details.get("reasoning_tokens", 0)
 
             # Estimate reasoning tokens: completion_tokens includes reasoning for
-            # kimi-k2-5, but streamed tokens are only the visible output.
+            # kimi-k2-6, but streamed tokens are only the visible output.
             # reasoning = total_completion - visible_output
             if not reasoning_tokens and output_tokens > 0 and self._streamed_tokens > 0:
                 reasoning_tokens = max(0, output_tokens - self._streamed_tokens)

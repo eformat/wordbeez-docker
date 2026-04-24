@@ -4,8 +4,8 @@ Entry point for the WordSwarm agent.
 Usage:
     # Set environment variables first:
     export MODEL_TOKEN="your-token-here"
-    export MODEL_URL="https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1"
-    export MODEL_NAME="kimi-k2-5"
+    export MODEL_URL="https://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/kimi-k2-6/v1"
+    export MODEL_NAME="kimi-k2-6"
     export GAME_URL="http://localhost:3000"
 
     # Run the agent:

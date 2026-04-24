@@ -41,8 +41,8 @@ modelToken: ""
 existingSecret: ""
 
 # Default model endpoint
-modelUrl: "https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1"
-modelName: "kimi-k2-5"
+modelUrl: "https://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/kimi-k2-6/v1"
+modelName: "kimi-k2-6"
 
 # Persistent storage for leaderboard
 persistence:

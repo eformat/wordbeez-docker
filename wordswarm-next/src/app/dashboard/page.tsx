@@ -138,8 +138,8 @@ export default function Dashboard() {
         const data = await res.json();
         if (data.models) {
           setModels(data.models);
-          // Default to kimi-k2-5 if available, otherwise first model
-          const kimi = data.models.find((m: ModelInfo) => m.id === 'kimi-k2-5');
+          // Default to kimi-k2-6 if available, otherwise first model
+          const kimi = data.models.find((m: ModelInfo) => m.id === 'kimi-k2-6');
           setSelectedModel(kimi ? kimi.id : data.models[0]?.id || '');
         }
       } catch {}

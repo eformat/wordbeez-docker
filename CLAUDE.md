@@ -189,4 +189,4 @@ The game engine is in `gameEngine.ts`. Puzzle generation is in `buildPuzzle()`. 
 - The game coordinate system is 0-indexed internally but the action queue uses 1-indexed cells (for the drag simulation).
 - `gameStore.ts` and `agentProcess.ts` use in-memory Maps — they only work when the Next.js server runs in a single process (not in serverless/edge). Each browser tab gets its own session via `X-Session-Id` header.
 - The agent's `recursion_limit` is 200 steps. When exceeded, `main.py` auto-restarts with a fresh context.
-- kimi-k2-5 is a reasoning model — it consumes significant tokens on internal "thinking" before producing visible output. Set `max_tokens` to 8192+.
+- kimi-k2-6 is a reasoning model — it consumes significant tokens on internal "thinking" before producing visible output. Set `max_tokens` to 8192+.

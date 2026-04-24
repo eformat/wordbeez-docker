@@ -11,7 +11,7 @@ The dashboard shows the game on the left and the AI agent on the right with live
 ```
 +---------------------------+---------------------------+
 |                           | AI Agent    [RUNNING]     |
-|    WordSwarm Game         | MODEL: [kimi-k2-5     v]  |
+|    WordSwarm Game         | MODEL: [kimi-k2-6     v]  |
 |    (honeycomb grid)       |                           |
 |                           | TTFT     Latency  LLM     |
 |    17 hex cells with      | 1.1s     2.7s     Calls   |
@@ -133,7 +133,7 @@ Results are classified:
 - **Ambiguous** (multiple candidates match) — needs LLM judgment
 - **Unsolvable** (0 candidates) — no dictionary word found for this hint
 
-### Step 3: LLM Strategy (kimi-k2-5 / selectable model)
+### Step 3: LLM Strategy (kimi-k2-6 / selectable model)
 
 The LLM receives the board state and solver results via tool calls:
 
@@ -286,8 +286,8 @@ docker run -p 8080:8080 -e MODEL_TOKEN="your-token" wordswarm
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MODEL_TOKEN` | (required) | Bearer token for MaaS / vLLM API authentication |
-| `MODEL_URL` | `https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1` | OpenAI-compatible LLM endpoint |
-| `MODEL_NAME` | `kimi-k2-5` | Model identifier |
+| `MODEL_URL` | `https://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/kimi-k2-6/v1` | OpenAI-compatible LLM endpoint |
+| `MODEL_NAME` | `kimi-k2-6` | Model identifier |
 | `GAME_URL` | `http://localhost:3000` | Game server URL (for agent) |
 | `PORT` | `3000` (dev) / `8080` (Docker) | Server port |
 | `POLL_INTERVAL` | `0.3` | Agent polling interval in seconds |

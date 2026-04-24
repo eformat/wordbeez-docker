@@ -8,12 +8,12 @@ GAME_URL = os.environ.get("GAME_URL", "http://localhost:3000")
 # Session ID — ties this agent to a specific browser tab's game session
 SESSION_ID = os.environ.get("SESSION_ID", "default")
 
-# LLM endpoint (OpenAI-compatible, e.g. vLLM serving kimi-k2-5)
+# LLM endpoint (OpenAI-compatible, e.g. vLLM serving kimi-k2-6)
 MODEL_URL = os.environ.get(
     "MODEL_URL",
-    "https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1",
+    "https://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/kimi-k2-6/v1",
 )
-MODEL_NAME = os.environ.get("MODEL_NAME", "kimi-k2-5")
+MODEL_NAME = os.environ.get("MODEL_NAME", "kimi-k2-6")
 MODEL_TOKEN = os.environ.get("MODEL_TOKEN", "")
 
 # Agent settings

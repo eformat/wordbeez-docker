@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     const saved = getSelectedModel(sessionId);
     const result = startAgent(sessionId, {
       GAME_URL: gameUrl,
-      MODEL_URL: body.modelUrl || saved?.url || 'https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1',
-      MODEL_NAME: body.modelName || saved?.id || 'kimi-k2-5',
+      MODEL_URL: body.modelUrl || saved?.url || 'https://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/kimi-k2-6/v1',
+      MODEL_NAME: body.modelName || saved?.id || 'kimi-k2-6',
       MODEL_TOKEN: token,
     });
     return NextResponse.json(result);

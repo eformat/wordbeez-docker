@@ -278,6 +278,7 @@ def create_agent():
         max_tokens=8192,
         streaming=True,
         stream_usage=True,
+        extra_body={"chat_template_kwargs": {"enable_thinking": _config.ENABLE_THINKING}},
         callbacks=[stats_handler],
     )
 

@@ -8,8 +8,8 @@
 #   4. Run this script:   ./run.sh
 
 export GAME_URL="${GAME_URL:-http://localhost:3000}"
-export MODEL_URL="${MODEL_URL:-https://maas.apps.ocp.cloud.rhai-tmm.dev/kimi-k25/kimi-k2-5/v1}"
-export MODEL_NAME="${MODEL_NAME:-kimi-k2-5}"
+export MODEL_URL="${MODEL_URL:-https://maas.apps.ocp.cloud.rhai-tmm.dev/v1}"
+export MODEL_NAME="${MODEL_NAME:-publishers/prelude-maas/models/glm-53-flash}"
 if [ -z "$MODEL_TOKEN" ]; then
     echo "ERROR: MODEL_TOKEN env var is required"
     echo "  export MODEL_TOKEN='your-bearer-token'"

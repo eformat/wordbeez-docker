@@ -138,9 +138,9 @@ export default function Dashboard() {
         const data = await res.json();
         if (data.models) {
           setModels(data.models);
-          // Default to kimi-k2-6 if available, otherwise first model
-          const kimi = data.models.find((m: ModelInfo) => m.id === 'kimi-k2-6');
-          setSelectedModel(kimi ? kimi.id : data.models[0]?.id || '');
+          // Default to glm-53-flash if available, otherwise first model
+          const glm = data.models.find((m: ModelInfo) => m.id.endsWith('glm-53-flash'));
+          setSelectedModel(glm ? glm.id : data.models[0]?.id || '');
         }
       } catch {}
       setModelsLoading(false);
@@ -178,7 +178,10 @@ export default function Dashboard() {
   // Poll for agent logs when running
   const startPolling = useCallback(() => {
     if (!sessionId) return;
-    if (pollRef.current) clearInterval(pollRef.current);
+    // Idempotent: if a poller already exists, keep it — creating a second one
+    // races with the in-flight fetch (both poll from the same index and
+    // duplicate every log line)
+    if (pollRef.current) return;
     logIndexRef.current = 0;
 
     pollRef.current = setInterval(async () => {

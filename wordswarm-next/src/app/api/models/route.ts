@@ -34,12 +34,18 @@ export async function GET() {
     const models = (data.data || [])
       .filter((m: Record<string, unknown>) => m.ready)
       .map((m: Record<string, unknown>) => {
-        const rawUrl = (m.url as string) || '';
-        const url = rawUrl.replace(/^http:/, 'https:') + '/v1';
+        const id = (m.id as string) || '';
+        // New MaaS API: all models share a common base url (e.g. https://maas.../),
+        // OpenAI-compatible endpoints live at <base>/v1
+        const rawUrl = (m.url as string) || MAAS_HOST;
+        const url = rawUrl.replace(/^http:/, 'https:').replace(/\/+$/, '') + '/v1';
         const details = (m.modelDetails as Record<string, string>) || {};
+        // Derive a short display name from the publisher path id
+        // (e.g. "publishers/prelude-maas/models/glm-53-flash" -> "glm-53-flash")
+        const shortName = id.split('/').pop() || id;
         return {
-          id: m.id,
-          name: details.displayName || m.id,
+          id,
+          name: details.displayName || shortName,
           url,
         };
       });

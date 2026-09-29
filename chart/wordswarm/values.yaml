@@ -40,9 +40,9 @@ modelToken: ""
 # Set to the name of a Secret with key MODEL_TOKEN
 existingSecret: ""
 
-# Default model endpoint
-modelUrl: "https://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/kimi-k2-6/v1"
-modelName: "kimi-k2-6"
+# Default model endpoint (common MaaS base url) and full publisher-path model id
+modelUrl: "https://maas.apps.ocp.cloud.rhai-tmm.dev/v1"
+modelName: "publishers/prelude-maas/models/glm-53-flash"
 
 # Persistent storage for leaderboard
 persistence:

@@ -4,8 +4,8 @@ Entry point for the WordSwarm agent.
 Usage:
     # Set environment variables first:
     export MODEL_TOKEN="your-token-here"
-    export MODEL_URL="https://maas.apps.ocp.cloud.rhai-tmm.dev/prelude-maas/kimi-k2-6/v1"
-    export MODEL_NAME="kimi-k2-6"
+    export MODEL_URL="https://maas.apps.ocp.cloud.rhai-tmm.dev/v1"
+    export MODEL_NAME="publishers/prelude-maas/models/glm-53-flash"
     export GAME_URL="http://localhost:3000"
 
     # Run the agent:
@@ -15,8 +15,6 @@ Usage:
 """
 
 import sys
-
-import httpx
 
 from .agent import create_agent
 
@@ -39,27 +37,6 @@ def main():
     print(f"  Game server:  {cfg.GAME_URL}")
     print(f"  LLM endpoint: {cfg.MODEL_URL}")
     print(f"  Model:        {cfg.MODEL_NAME}")
-    print()
-
-    # Discover actual model name from vLLM endpoint
-    # vLLM serves models with their own internal name (e.g., "RedHatAI/llama-3.2-3b-instruct")
-    # which may differ from the MaaS API id (e.g., "llama-32-3b")
-    try:
-        resp = httpx.get(
-            f"{cfg.MODEL_URL}/models",
-            headers={"Authorization": f"Bearer {cfg.MODEL_TOKEN}"},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        models_data = resp.json().get("data", [])
-        if models_data:
-            served_name = models_data[0].get("id", cfg.MODEL_NAME)
-            if served_name != cfg.MODEL_NAME:
-                print(f"  Discovered served model name: {served_name}")
-                cfg.MODEL_NAME = served_name
-    except Exception as e:
-        print(f"  Warning: Could not discover model name from endpoint: {e}")
-        print(f"  Using configured name: {cfg.MODEL_NAME}")
     print()
 
     # Wait for game server to be reachable (retries for container startup)

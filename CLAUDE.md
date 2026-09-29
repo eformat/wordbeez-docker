@@ -170,7 +170,7 @@ httpx-based HTTP client with Pydantic models:
 ## Common Tasks
 
 ### Changing the LLM
-Select from the dropdown in the dashboard. Models are fetched from the MaaS API at `/maas-api/v1/models`. The selected model's URL and ID are passed to the agent on start.
+Select from the dropdown in the dashboard. Models are fetched from the MaaS API at `{MAAS_HOST}/maas-api/v1/models`. All models share a common OpenAI-compatible base url (`{MAAS_HOST}/v1`); model ids are full publisher paths (e.g. `publishers/prelude-maas/models/glm-53-flash`). The common URL and full id are passed to the agent on start.
 
 ### Adding new agent tools
 1. Add the `@tool` function in `agent.py`
@@ -189,4 +189,4 @@ The game engine is in `gameEngine.ts`. Puzzle generation is in `buildPuzzle()`. 
 - The game coordinate system is 0-indexed internally but the action queue uses 1-indexed cells (for the drag simulation).
 - `gameStore.ts` and `agentProcess.ts` use in-memory Maps — they only work when the Next.js server runs in a single process (not in serverless/edge). Each browser tab gets its own session via `X-Session-Id` header.
 - The agent's `recursion_limit` is 200 steps. When exceeded, `main.py` auto-restarts with a fresh context.
-- kimi-k2-6 is a reasoning model — it consumes significant tokens on internal "thinking" before producing visible output. Set `max_tokens` to 8192+.
+- Reasoning models (e.g. GLM) enable "thinking" by default — the agent passes `chat_template_kwargs: {enable_thinking: false}` via `extra_body` (toggle with `ENABLE_THINKING` env var). Set `max_tokens` to 8192+.

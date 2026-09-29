@@ -1,3 +1,5 @@
 /bin
 BLOG.md
 .playwright-cli/
+.vscode/
+__pycache__
